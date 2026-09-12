@@ -61,7 +61,7 @@ docs/                 架构、发布流程和迁移说明
 
 ## 开发
 
-环境要求：Node.js 20+, pnpm 9.x（仓库锁文件为 pnpm 9 的 lockfile v9 格式）。
+环境要求：Node.js 22.16+, pnpm 10.x（仓库锁文件使用 lockfile v9 格式及 pnpm 10 元数据）。
 
 ```bash
 pnpm install
