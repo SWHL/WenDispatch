@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build MD editor assets
+        run: pnpm --filter @wendispatch/extension build:md-editor
+
       - name: Run tests
         run: pnpm exec vitest run
 
