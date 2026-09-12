@@ -24,7 +24,8 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          # pnpm-lock.yaml uses the lockfile v9 format, which pnpm 8 cannot read.
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
