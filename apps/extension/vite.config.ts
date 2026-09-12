@@ -1,0 +1,104 @@
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import UnoCSS from 'unocss/vite';
+import { resolve } from 'path';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { build } from 'esbuild';
+import manifest from './src/manifest';
+import { createDistManifest, getContentScriptBuildEntries } from './scripts/build-extension-manifest';
+
+// 插件：生成 manifest.json 和转换 content-scripts 为 IIFE
+function buildExtension() {
+  return {
+    name: 'build-extension',
+    async closeBundle() {
+      const distDir = resolve(__dirname, 'dist');
+      
+      // 确保 dist 目录存在
+      if (!existsSync(distDir)) {
+        mkdirSync(distDir, { recursive: true });
+      }
+
+      // 1. 生成 manifest.json
+      console.log('Generating manifest.json...');
+      const distManifest = createDistManifest(manifest as any);
+      writeFileSync(
+        resolve(distDir, 'manifest.json'),
+        JSON.stringify(distManifest, null, 2)
+      );
+
+      // 2. 转换 content-scripts 为 IIFE
+      for (const contentScript of getContentScriptBuildEntries(__dirname)) {
+        console.log(`Building ${contentScript.outputFile} as IIFE...`);
+        await build({
+          entryPoints: [contentScript.entryPoint],
+          bundle: true,
+          format: 'iife',
+          globalName: contentScript.globalName,
+          outfile: contentScript.outfile,
+          platform: 'browser',
+          target: 'es2020',
+          minify: false,
+          alias: {
+            '@': resolve(__dirname, 'src'),
+          },
+        });
+      }
+
+      // 3. 复制 icons 目录（如果存在）
+      const iconsDir = resolve(__dirname, 'public/icons');
+      if (existsSync(iconsDir)) {
+        console.log('Copying icons...');
+        const distIconsDir = resolve(distDir, 'icons');
+        if (!existsSync(distIconsDir)) {
+          mkdirSync(distIconsDir, { recursive: true });
+        }
+        // 这里可以添加复制逻辑
+      }
+
+      console.log('✓ Extension files generated');
+    },
+  };
+}
+
+export default defineConfig({
+  plugins: [vue(), UnoCSS(), buildExtension()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@wendispatch/core': resolve(__dirname, '../../packages/core/src'),
+      '@wendispatch/ai': resolve(__dirname, '../../packages/ai/src'),
+      '@wendispatch/adapters': resolve(__dirname, '../../packages/adapters/src'),
+      '@wendispatch/agent-protocol': resolve(__dirname, '../../packages/agent-protocol/src'),
+      '@wendispatch/utils': resolve(__dirname, '../../packages/utils/src'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        popup: resolve(__dirname, 'src/ui/popup/index.html'),
+        options: resolve(__dirname, 'src/ui/options/index.html'),
+        sidepanel: resolve(__dirname, 'src/ui/sidepanel/index.html'),
+        background: resolve(__dirname, 'src/background/index.ts'),
+        // content-scripts 会被 buildExtension 插件单独处理
+      },
+      output: {
+        entryFileNames: (chunkInfo: any) => {
+          if (chunkInfo.name === 'background') {
+            return '[name].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: { port: 5173 },
+  },
+});

@@ -1,0 +1,189 @@
+/**
+ * 简 by aco
+ * Source: https://markdown.com.cn/wechat/
+ */
+
+/* 根据该字体大小，统一调整文章整体大小 */
+/* 间距，其他字体，代码块以及注脚 */
+/* 不会控制微信代码块 */
+#output {
+  font-size: 16px;
+}
+
+/* 颜色管理 */
+#output a {
+  color: #3e64ff;
+}
+#output p code {
+  color: #e46918;
+  background-color: #efefef;
+}
+#output .footnote-word,
+#output .footnote-ref {
+  color: #004a7c;
+}
+#output .footnote-item em {
+  color: #004a7c;
+}
+
+/* 统一间距 */
+#output p,
+#output section,
+#output h1,
+#output h2,
+#output h3,
+#output h4,
+#output h5,
+#output h6,
+#output pre,
+#output figure,
+#output ul,
+#output hr {
+  margin: 1em 0;
+  color: #333;
+}
+
+#output {
+  margin-top: -1em;
+  color: #333;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-family:
+    -apple-system,
+    system-ui,
+    BlinkMacSystemFont,
+    Helvetica Neue,
+    PingFang SC,
+    Hiragino Sans GB,
+    Microsoft YaHei,
+    Arial,
+    sans-serif;
+}
+#output * {
+  line-height: 1.6 !important;
+}
+
+#output hr {
+  border-top: 1px solid #dfe2e5;
+}
+
+/* 标题调整 */
+#output h1 {
+  font-size: 1.4em;
+}
+#output h2 {
+  font-size: 1.3em;
+}
+#output h1,
+#output h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #dfe2e5;
+}
+#output h3 {
+  font-size: 1.2em;
+}
+#output h4 {
+  font-size: 1.1em;
+}
+#output h5 {
+  font-size: 1em;
+}
+#output h6 {
+  font-size: 1em;
+}
+
+/* 段落调整 */
+#output p {
+  padding: 0;
+  font-size: inherit;
+  color: #333;
+}
+#output blockquote {
+  background: none;
+  border-left: 4px solid #ddd;
+  padding: 0 1em;
+}
+#output blockquote p {
+  margin: 0;
+  color: #666;
+}
+#output strong {
+  color: #333;
+}
+
+#output a {
+  font-weight: normal;
+  border-color: inherit;
+}
+
+/* 列表调整 */
+#output li section {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  font-weight: normal;
+}
+#output li ul {
+  margin: 0;
+}
+
+/* 代码块调整 */
+#output pre {
+  border-radius: 4px;
+}
+#output section pre {
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+#output p code {
+  font-size: 0.875em;
+}
+#output pre code {
+  font-size: 0.875em;
+}
+
+#output figure img {
+  max-width: 100%;
+  width: auto;
+  margin: 0 auto;
+}
+
+/* table 调整 */
+#output table tr th,
+#output table tr td {
+  font-size: 1em;
+}
+
+/* 注脚调整 */
+#output .footnotes-sep {
+  font-size: 1.3em;
+}
+#output .footnote-item {
+  margin: 0.4em 0;
+}
+#output .footnote-item * {
+  line-height: 1.4 !important;
+}
+#output .footnote-item p {
+  margin: 0;
+  font-size: 0.9em;
+}
+#output .footnote-item em {
+  font-style: normal;
+  padding-left: 0.5em;
+}
+#output .footnote-item span {
+  flex: 0 0 1.5em;
+  margin-right: 10px;
+  font-size: 0.9em;
+}
+
+/* 微信默认样式修复 */
+/* 微信代码块固定为 14px */
+#output pre.code-snippet__js {
+  padding: 16px 0;
+}
+
+#output pre.code-snippet__js code {
+  font-size: 14px;
+}

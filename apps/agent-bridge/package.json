@@ -1,0 +1,18 @@
+{
+  "name": "@wendispatch/agent-bridge",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "wendispatch-agent-bridge-native": "./dist/native-host.js",
+    "wendispatch-agent-bridge-mcp": "./dist/mcp.js",
+    "synccaster-agent-bridge-native": "./dist/native-host.js",
+    "synccaster-agent-bridge-mcp": "./dist/mcp.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter @wendispatch/agent-protocol build && tsc -p tsconfig.json",
+    "install:native:linux": "node ./scripts/install-native-host-linux.mjs"
+  },
+  "dependencies": {
+    "@wendispatch/agent-protocol": "workspace:*"
+  }
+}

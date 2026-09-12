@@ -1,0 +1,475 @@
+/**
+ * Markdown.com.cn compatible base theme.
+ * Source: https://markdown.com.cn/wechat/
+ */
+
+/* Reset properties introduced by WenDispatch's classic theme before applying
+ * the Markdown.com.cn baseline and selected theme. */
+#output h1,
+#output h2,
+#output h3,
+#output h4,
+#output h5,
+#output h6 {
+  display: block;
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: black;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  text-shadow: none;
+}
+
+#output p {
+  letter-spacing: 0;
+}
+
+#output blockquote {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#output pre.code__pre,
+#output .hljs.code__pre,
+#output img,
+#output table {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/*默认样式，最佳实践*/
+
+/*全局属性*/
+#output {
+  /*box-shadow: 0 0 60px rgba(0,0,0,.1);*/
+  font-size: 16px;
+  color: black;
+  padding: 25px 0px;
+  line-height: 1.6;
+  word-spacing: 0px;
+  letter-spacing: 0px;
+  word-break: break-word;
+  word-wrap: break-word;
+  text-align: justify;
+  font-family:
+    Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times,
+    'Times New Roman', serif;
+  margin-top: -10px; /*解决开头空隙过大问题*/
+}
+
+/*段落*/
+#output p {
+  font-size: 16px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  margin: 0;
+  line-height: 26px;
+  color: black;
+}
+
+/*标题*/
+#output h1,
+#output h2,
+#output h3,
+#output h4,
+#output h5,
+#output h6 {
+  margin-top: 30px;
+  margin-bottom: 15px;
+  font-weight: bold;
+  color: black;
+}
+#output h1 {
+  font-size: 24px;
+}
+#output h2 {
+  font-size: 22px;
+}
+#output h3 {
+  font-size: 20px;
+}
+#output h4 {
+  font-size: 18px;
+}
+#output h5 {
+  font-size: 16px;
+}
+#output h6 {
+  font-size: 16px;
+}
+
+#output h1 .prefix,
+#output h2 .prefix,
+#output h3 .prefix,
+#output h4 .prefix,
+#output h5 .prefix,
+#output h6 .prefix {
+  display: none;
+}
+
+#output h1 .suffix,
+#output h2 .suffix,
+#output h3 .suffix,
+#output h4 .suffix,
+#output h5 .suffix,
+#output h6 .suffix {
+  display: none;
+}
+
+/*列表*/
+#output ul,
+#output ol {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-left: 25px;
+  color: black;
+}
+#output ul {
+  list-style-type: disc;
+}
+#output ul ul {
+  list-style-type: square;
+}
+
+#output ol {
+  list-style-type: decimal;
+}
+
+#output li section {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  line-height: 26px;
+  text-align: left;
+  color: rgb(1, 1, 1); /* 只要是纯黑色微信编辑器就会把color这个属性吞掉。。。*/
+  font-weight: 500;
+}
+
+/*引用*/
+#output blockquote {
+  display: block;
+  font-size: 0.9em;
+  overflow: auto;
+  overflow-scrolling: touch;
+  border-left: 3px solid rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.05);
+  color: #6a737d;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 20px;
+  padding-right: 10px;
+  margin-bottom: 20px;
+  margin-top: 20px;
+}
+
+#output blockquote p {
+  margin: 0px;
+  color: black;
+  line-height: 26px;
+}
+
+#output .table-of-contents a {
+  border: none;
+  color: black;
+  font-weight: normal;
+}
+
+/*链接*/
+#output a {
+  text-decoration: none;
+  color: #1e6bb8;
+  word-wrap: break-word;
+  font-weight: bold;
+  border-bottom: 1px solid #1e6bb8;
+}
+
+/*加粗*/
+#output strong {
+  font-weight: bold;
+  color: black;
+}
+
+/*斜体*/
+#output em {
+  font-style: italic;
+  color: black;
+}
+
+/*加粗斜体*/
+#output em strong {
+  font-weight: bold;
+  color: black;
+}
+
+/*删除线*/
+#output del {
+  font-style: italic;
+  color: black;
+}
+
+/*分隔线*/
+#output hr {
+  height: 1px;
+  margin: 0;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-top: 1px solid black;
+}
+
+/*代码块*/
+#output pre {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+#output pre code {
+  display: -webkit-box;
+  font-family:
+    Operator Mono,
+    Consolas,
+    Monaco,
+    Menlo,
+    monospace;
+  border-radius: 0px;
+  font-size: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+#output pre code span {
+  line-height: 26px;
+}
+
+/*行内代码*/
+#output p code,
+#output li code {
+  font-size: 14px;
+  word-wrap: break-word;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin: 0 2px;
+  color: #1e6bb8;
+  background-color: rgba(27, 31, 35, 0.05);
+  font-family:
+    Operator Mono,
+    Consolas,
+    Monaco,
+    Menlo,
+    monospace;
+  word-break: break-all;
+}
+
+/*图片*/
+#output img {
+  display: block;
+  margin: 0 auto;
+  width: auto;
+  max-width: 100%;
+}
+
+/*图片*/
+#output figure {
+  margin: 0;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/*图片描述文字*/
+#output figcaption {
+  margin-top: 5px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+/*表格*/
+#output table {
+  display: table;
+  text-align: left;
+}
+#output tbody {
+  border: 0;
+}
+
+#output table tr {
+  border: 0;
+  border-top: 1px solid #ccc;
+  background-color: white;
+}
+
+#output table tr:nth-child(2n) {
+  background-color: #f8f8f8;
+}
+
+#output table tr th,
+#output table tr td {
+  font-size: 16px;
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  text-align: left;
+}
+
+#output table tr th {
+  font-weight: bold;
+  background-color: #f0f0f0;
+}
+
+/* 微信代码块 */
+#output .code-snippet__fix {
+  word-wrap: break-word !important;
+  font-size: 14px;
+  margin: 10px 0;
+  display: block;
+  color: #333;
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.03);
+  border: 1px solid #f0f0f0;
+  border-radius: 2px;
+  display: flex;
+  line-height: 20px;
+}
+#output .code-snippet__fix pre {
+  margin-bottom: 10px;
+  margin-top: 0px;
+}
+#output .code-snippet__fix .code-snippet__line-index {
+  counter-reset: line;
+  flex-shrink: 0;
+  height: 100%;
+  padding: 1em;
+  list-style-type: none;
+  padding: 16px;
+  margin: 0;
+}
+#output .code-snippet__fix .code-snippet__line-index li {
+  list-style-type: none;
+  text-align: right;
+  line-height: 26px;
+  color: black;
+  margin: 0;
+}
+#output .code-snippet__fix .code-snippet__line-index li::before {
+  min-width: 1.5em;
+  text-align: right;
+  left: -2.5em;
+  counter-increment: line;
+  content: counter(line);
+  display: inline;
+  color: rgba(0, 0, 0, 0.3);
+}
+#output .code-snippet__fix pre {
+  overflow-x: auto;
+  padding: 16px;
+  padding-left: 0;
+  white-space: normal;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+#output .code-snippet__fix code {
+  text-align: left;
+  font-size: 14px;
+  display: block;
+  white-space: pre;
+  display: flex;
+  position: relative;
+  font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  padding: 0px;
+}
+
+#output .footnote-word {
+  color: #1e6bb8;
+  font-weight: bold;
+}
+
+#output .footnote-ref {
+  color: #1e6bb8;
+  font-weight: bold;
+}
+
+#output .footnote-item {
+  display: flex;
+}
+
+#output .footnote-num {
+  display: inline;
+  width: 10%; /*神奇，50px就不可以*/
+  background: none;
+  font-size: 80%;
+  opacity: 0.6;
+  line-height: 26px;
+  font-family:
+    ptima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times,
+    'Times New Roman', serif;
+}
+
+#output .footnote-item p {
+  display: inline;
+  font-size: 14px;
+  width: 90%;
+  padding: 0px;
+  margin: 0;
+  line-height: 26px;
+  color: black;
+  word-break: break-all;
+  width: calc(100%-50);
+}
+
+#output sub,
+sup {
+  line-height: 0;
+}
+
+#output .footnotes-sep:before {
+  content: '参考资料';
+  display: block;
+}
+
+/* 解决公式问题 */
+#output .block-equation {
+  display: block;
+  text-align: center;
+  /*overflow: auto;*/
+  display: block;
+  -webkit-overflow-scrolling: touch;
+}
+
+#output .block-equation svg {
+  max-width: 300% !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+#output .inline-equation {
+}
+
+#output .inline-equation svg {
+}
+
+#output .imageflow-layer1 {
+  margin: 1em auto;
+  white-space: normal;
+  border: 0px none;
+  padding: 0px;
+  overflow: hidden;
+}
+
+#output .imageflow-layer2 {
+  white-space: nowrap;
+  width: 100%;
+  overflow-x: scroll;
+}
+
+#output .imageflow-layer3 {
+  display: inline-block;
+  word-wrap: break-word;
+  white-space: normal;
+  vertical-align: middle;
+  width: 100%;
+}
+
+#output .imageflow-img {
+  display: inline-block;
+}
+
+#output .nice-suffix-juejin-container {
+  margin-top: 20px !important;
+}

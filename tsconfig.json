@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "types": ["vite/client", "chrome"],
+    "baseUrl": ".",
+    "paths": {
+      "@wendispatch/core": ["./packages/core/src"],
+      "@wendispatch/ai": ["./packages/ai/src"],
+      "@wendispatch/adapters": ["./packages/adapters/src"],
+      "@wendispatch/agent-protocol": ["./packages/agent-protocol/src"],
+      "@wendispatch/editor": ["./packages/editor/src"],
+      "@wendispatch/utils": ["./packages/utils/src"]
+    }
+  },
+  "include": ["apps/**/*", "packages/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

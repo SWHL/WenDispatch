@@ -1,0 +1,185 @@
+@nightPreviewColor: #191919;
+@nightCodeMirrorColor: #191919;
+@nightActiveCodeMirrorColor: gray;
+@nightFontColor: gray;
+@nightLinkColor: #8e9eb9;
+@nightLinkTextColor: #84868b;
+@nightLineColor: #84868b;
+
+.dark {
+  .container {
+    // CodeMirror v6 兼容
+    .cm-editor,
+    .CodeMirror-wrap {
+      background-color: @nightCodeMirrorColor;
+    }
+
+    .output_night {
+      .preview {
+        background-color: @nightPreviewColor;
+        box-shadow: 0 0 70px rgba(0, 0, 0, 0.3);
+      }
+
+      // 主题样式包含面向微信公众号浅色画布的固定黑色文字规则。
+      // 暗色预览中统一提升正文对比度，同时保留标题和链接的主题色。
+      #output {
+        color: #e5e7eb !important;
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        ul,
+        ol,
+        li,
+        li section,
+        blockquote,
+        blockquote p,
+        strong,
+        em,
+        em strong,
+        del,
+        table th,
+        table td,
+        figcaption,
+        .footnote-item p,
+        .table-of-contents a {
+          color: #e5e7eb !important;
+        }
+
+        hr {
+          border-top-color: #9ca3af !important;
+        }
+      }
+
+      .preview-wrapper {
+        background-color: @nightCodeMirrorColor;
+        box-shadow: inset 0 0 0 1px rgba(233, 231, 231, 0.102);
+      }
+
+      .code-snippet__fix {
+        background-color: rgb(238, 238, 238);
+      }
+    }
+
+    ::-webkit-scrollbar {
+      background-color: @nightCodeMirrorColor;
+    }
+  }
+}
+
+// `useColorMode` 的自动模式可能只暴露计算后的 isDark 状态，而不写入 `.dark` 类。
+// 预览容器直接使用该状态派生的类，确保暗色文字与通用编辑器一致。
+.dark-preview {
+  .preview {
+    background-color: @nightPreviewColor;
+    box-shadow: 0 0 70px rgba(0, 0, 0, 0.3);
+  }
+
+  #output {
+    color: #e5e7eb !important;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    ul,
+    ol,
+    li,
+    li section,
+    blockquote,
+    blockquote p,
+    strong,
+    em,
+    em strong,
+    del,
+    table th,
+    table td,
+    figcaption,
+    .footnote-item p,
+    .table-of-contents a {
+      color: #e5e7eb !important;
+    }
+
+    hr {
+      border-top-color: #9ca3af !important;
+    }
+  }
+}
+
+// CodeMirror v5 兼容样式
+.CodeMirror {
+  padding-bottom: 0;
+  height: 100% !important;
+  font-size: 16px;
+  font-family: Consolas, 'Courier New', monospace !important;
+}
+
+.CodeMirror-vscrollbar:focus {
+  outline: none;
+}
+
+.CodeMirror-vscrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.CodeMirror-wrap {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  box-sizing: border-box;
+}
+
+// CodeMirror v6 样式
+.cm-editor {
+  height: 100% !important;
+  font-size: 16px;
+  font-family: Consolas, 'Courier New', monospace !important;
+
+  .cm-scroller {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+
+    // 只隐藏 x 方向的滚动条
+    &::-webkit-scrollbar:horizontal {
+      display: none; /* Chrome/Safari/Webkit - 横向滚动条 */
+    }
+  }
+
+  .cm-content {
+    padding-bottom: 20px;
+  }
+
+  &.cm-focused {
+    outline: none;
+  }
+}
+
+.codemirror-container {
+  height: 100%;
+  width: 100%;
+
+  .cm-scroller {
+    padding: 10px;
+  }
+}
+
+.cssEditor-wrapper {
+  .CodeMirror-scroll,
+  .cm-scroller {
+    margin-right: 0;
+  }
+}
+
+.cm-em {
+  font-style: normal;
+}
+
+.cm-comment {
+  font-style: normal !important;
+}

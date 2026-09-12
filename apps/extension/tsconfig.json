@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "chrome"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@wendispatch/core": ["../../packages/core/src"],
+      "@wendispatch/adapters": ["../../packages/adapters/src"],
+      "@wendispatch/agent-protocol": ["../../packages/agent-protocol/src"],
+      "@wendispatch/utils": ["../../packages/utils/src"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.vue"
+  ]
+}
