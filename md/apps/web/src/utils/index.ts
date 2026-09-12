@@ -292,7 +292,7 @@ function createEmptyNode(): HTMLElement {
  */
 function getKatexStyles(): string {
   // 查找 KaTeX 样式表
-  const katexStyles = Array.from(document.styleSheets).find(sheet => {
+  const katexStyles = Array.from(document.styleSheets).find((sheet) => {
     try {
       // 检查是否是 KaTeX 样式表
       const rules = sheet.cssRules || sheet.rules
@@ -302,7 +302,8 @@ function getKatexStyles(): string {
           return true
         }
       }
-    } catch (e) {
+    }
+    catch {
       // 跨域样式表无法访问
     }
     return false
@@ -313,10 +314,11 @@ function getKatexStyles(): string {
       const rules = katexStyles.cssRules || katexStyles.rules
       let cssText = ''
       for (let i = 0; i < rules.length; i++) {
-        cssText += rules[i].cssText + '\n'
+        cssText += `${rules[i].cssText}\n`
       }
       return `<style>${cssText}</style>`
-    } catch {
+    }
+    catch {
       // Silently ignore extraction errors
     }
   }
@@ -342,6 +344,19 @@ export async function processClipboardContent(primaryColor: string) {
 
   if (stylesToAdd) {
     clipboardDiv.innerHTML = stylesToAdd + clipboardDiv.innerHTML
+  }
+
+  // 公众号会过滤 <style> 标签，且复制后的 HTML 不再拥有编辑器中的
+  // CSS 变量声明。先把字号和字体变量解析为实际值，再进行 CSS 内联，
+  // 否则内联样式中的 var(--md-font-size) 会变成无效样式。
+  const computedStyle = getComputedStyle(clipboardDiv)
+  const fontSize = computedStyle.getPropertyValue(`--md-font-size`).trim()
+  const fontFamily = computedStyle.getPropertyValue(`--md-font-family`).trim()
+  if (fontSize) {
+    clipboardDiv.innerHTML = clipboardDiv.innerHTML.replace(/var\(--md-font-size\)/g, fontSize)
+  }
+  if (fontFamily) {
+    clipboardDiv.innerHTML = clipboardDiv.innerHTML.replace(/var\(--md-font-family\)/g, fontFamily)
   }
 
   // 先合并 CSS 和修改 HTML 结构
