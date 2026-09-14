@@ -212,7 +212,7 @@ type ThemeMode = 'light' | 'dark' | 'auto';
 // 与 Markdown 编辑器的 VueUse 主题状态共享，确保两个页面设置一致
 const THEME_MODE_STORAGE_KEY = 'vueuse-color-scheme';
 const savedThemeMode = localStorage.getItem(THEME_MODE_STORAGE_KEY) ?? localStorage.getItem('wendispatch-theme-mode');
-const themeMode = ref<ThemeMode>(savedThemeMode === 'light' || savedThemeMode === 'dark' || savedThemeMode === 'auto' ? savedThemeMode : 'light');
+const themeMode = ref<ThemeMode>(savedThemeMode === 'light' || savedThemeMode === 'dark' || savedThemeMode === 'auto' ? savedThemeMode : 'auto');
 const systemIsDark = ref(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
 const isDark = computed(() => themeMode.value === 'auto' ? systemIsDark.value : themeMode.value === 'dark');
 const themeModeOptions = [
