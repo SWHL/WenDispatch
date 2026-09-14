@@ -66,6 +66,31 @@
         </div>
       </div>
 
+      <!-- 封面上传入口：位于标题下方，独立于正文图片 -->
+      <div v-if="editorTab === 'general'" class="cover-section cover-inline">
+        <div class="cover-header">
+          <div class="cover-inline-info">
+            <div class="cover-title">文章封面</div>
+            <div class="cover-hint">发布到支持封面的平台时将使用此图片</div>
+          </div>
+          <div class="cover-actions">
+            <button type="button" class="cover-action-btn" @click="triggerCoverUpload" title="上传封面">
+              <AppIcon name="image" />
+              <span>{{ cover ? '更换封面' : '上传封面' }}</span>
+            </button>
+            <button v-if="cover" type="button" class="cover-remove-btn" @click="clearCover" title="移除封面" aria-label="移除封面">
+              <AppIcon name="xmark" />
+            </button>
+          </div>
+        </div>
+        <input ref="coverInputRef" type="file" accept="image/*" style="display: none" @change="handleCoverUpload" />
+        <div v-if="cover" class="cover-preview" @click="previewImage(cover)">
+          <img :src="cover.blobUrl || cover.url" :alt="cover.alt || '文章封面'" />
+          <span class="cover-preview-label">当前封面</span>
+        </div>
+        <div v-else class="cover-empty">尚未设置封面</div>
+      </div>
+
       <!-- 通用编辑器主体：左右分栏 -->
       <div v-if="editorTab === 'general'" ref="editorMainRef" class="editor-main" :style="{ height: editorHeight + 'px' }">
         <!-- 左侧：Markdown 编辑器 -->
@@ -136,31 +161,6 @@
       <!-- 底部拖拽条 - 调整高度 -->
       <div v-if="editorTab === 'general'" class="height-resizer" :class="{ dragging: isResizingHeight }" @mousedown="startResizeHeight">
         <div class="resizer-handle"></div>
-      </div>
-
-      <!-- 独立封面上传，不会向正文插入图片 -->
-      <div v-if="editorTab === 'general'" class="cover-section">
-        <div class="cover-header">
-          <div>
-            <div class="cover-title">文章封面</div>
-            <div class="cover-hint">发布到支持封面的平台时将使用此图片</div>
-          </div>
-          <div class="cover-actions">
-            <button type="button" class="cover-action-btn" @click="triggerCoverUpload" title="上传封面">
-              <AppIcon name="image" />
-              <span>{{ cover ? '更换封面' : '上传封面' }}</span>
-            </button>
-            <button v-if="cover" type="button" class="cover-remove-btn" @click="clearCover" title="移除封面" aria-label="移除封面">
-              <AppIcon name="xmark" />
-            </button>
-          </div>
-        </div>
-        <input ref="coverInputRef" type="file" accept="image/*" style="display: none" @change="handleCoverUpload" />
-        <div v-if="cover" class="cover-preview" @click="previewImage(cover)">
-          <img :src="cover.blobUrl || cover.url" :alt="cover.alt || '文章封面'" />
-          <span class="cover-preview-label">当前封面</span>
-        </div>
-        <div v-else class="cover-empty">尚未设置封面</div>
       </div>
 
       <!-- 图片资源 -->
@@ -249,9 +249,9 @@
           <div class="unsaved-dialog-title">文章尚未保存</div>
           <div class="unsaved-dialog-message">是否保存当前修改？</div>
           <div class="unsaved-dialog-actions">
-            <button class="unsaved-btn unsaved-btn-primary" @click="handleSaveAndLeave" autofocus>是（保存）</button>
-            <button class="unsaved-btn unsaved-btn-secondary" @click="handleDiscardAndLeave">否（不保存）</button>
-            <button class="unsaved-btn unsaved-btn-cancel" @click="handleCancelLeave">取消</button>
+            <button type="button" class="unsaved-btn unsaved-btn-primary" @click="handleSaveAndLeave" autofocus>是（保存）</button>
+            <button type="button" class="unsaved-btn unsaved-btn-secondary" @click="handleDiscardAndLeave">否（不保存）</button>
+            <button type="button" class="unsaved-btn unsaved-btn-cancel" @click="handleCancelLeave">取消</button>
           </div>
         </div>
       </div>
@@ -1035,9 +1035,21 @@ async function getHashAfterCreate(post: any) {
 }
 
 async function save(options: { routeAfterCreate?: boolean } = {}) {
+  try {
+    return await persistArticle(options);
+  } catch (error: any) {
+    console.error('[Editor] Save failed:', error);
+    showValidationError(`保存失败：${error?.message || '未知错误'}，请重试`);
+    return false;
+  }
+}
+
+async function persistArticle(options: { routeAfterCreate?: boolean } = {}) {
   const routeAfterCreate = options.routeAfterCreate ?? true;
   if (!title.value.trim()) { showValidationError('请输入文章标题'); return false; }
   if (!body.value.trim()) { showValidationError('请输入文章正文'); return false; }
+  // Vue ref 中的封面是 Proxy，IndexedDB 无法克隆；包括 variants 在内转为普通数据。
+  const coverSnapshot = cover.value ? JSON.parse(JSON.stringify(cover.value)) : undefined;
   
   // 合并现有图片资源和新粘贴的图片
   const allAssets = images.value.map(img => ({
@@ -1056,7 +1068,7 @@ async function save(options: { routeAfterCreate?: boolean } = {}) {
   if (!id.value || id.value === 'new') {
     const now = Date.now();
     const newId = crypto.randomUUID?.() || `${now}-${Math.random().toString(36).slice(2, 8)}`;
-    const post = { id: newId, version: 1, title: title.value, summary: body.value.slice(0, 200), canonicalUrl: '', createdAt: now, updatedAt: now, body_md: body.value, tags: [], categories: [], assets: allAssets, cover: cover.value || undefined, meta: {} };
+    const post = { id: newId, version: 1, title: title.value, summary: body.value.slice(0, 200), canonicalUrl: '', createdAt: now, updatedAt: now, body_md: body.value, tags: [], categories: [], assets: allAssets, cover: coverSnapshot, meta: {} };
     await db.posts.add(post as any);
     // 更新当前文章 ID，避免重复创建
     id.value = newId;
@@ -1071,7 +1083,8 @@ async function save(options: { routeAfterCreate?: boolean } = {}) {
     showCopySuccess('文章已保存');
     return true;
   }
-  await db.posts.update(id.value, { title: title.value, body_md: body.value, summary: body.value.slice(0, 200), updatedAt: Date.now(), assets: allAssets, cover: cover.value || undefined } as any);
+  const updated = await db.posts.update(id.value, { title: title.value, body_md: body.value, summary: body.value.slice(0, 200), updatedAt: Date.now(), assets: allAssets, cover: coverSnapshot } as any);
+  if (!updated) throw new Error('文章不存在，无法保存');
   savedTitle.value = title.value;
   savedBody.value = body.value;
   savedCoverUrl.value = String(cover.value?.url || '');
@@ -1122,7 +1135,7 @@ function handleWechatEditorLoad() {
 
 // 未保存确认弹窗操作
 async function handleSaveAndLeave() {
-  const success = await save();
+  const success = await save({ routeAfterCreate: pendingNavigation.value !== 'publish' });
   if (success && pendingNavigation.value) {
     showUnsavedDialog.value = false;
     
@@ -1139,12 +1152,15 @@ async function handleSaveAndLeave() {
   }
 }
 
-function handleDiscardAndLeave() {
+async function handleDiscardAndLeave() {
   showUnsavedDialog.value = false;
-  
-  // 如果是发布操作且用户选择不保存，则不执行发布
+
+  // 发布操作选择“不保存”时，继续使用数据库中最近一次保存的内容发布。
   if (pendingNavigation.value === 'publish') {
     pendingNavigation.value = null;
+    await loadEnabledAccounts();
+    selectedAccounts.value = [];
+    showPublishDialog.value = true;
     return;
   }
   
@@ -1419,7 +1435,11 @@ onUnmounted(() => {
 .markdown-preview .empty-hint { color: #9ca3af; font-style: italic; }
 .markdown-preview .error-hint { color: #ef4444; }
 
-.cover-section { margin-top: 14px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; flex-shrink: 0; }
+.cover-section { margin-top: 10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; flex-shrink: 0; }
+.cover-inline { display: flex; align-items: center; gap: 12px; }
+.cover-inline-info { min-width: 0; flex: 1; }
+.cover-inline .cover-preview { width: 120px; flex: 0 0 120px; margin-top: 0; }
+.cover-inline .cover-empty { margin-top: 0; white-space: nowrap; }
 .editor-page.dark .cover-section { border-color: #374151; background: #1f2937; }
 .cover-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cover-title { font-size: 12px; font-weight: 600; color: #374151; }

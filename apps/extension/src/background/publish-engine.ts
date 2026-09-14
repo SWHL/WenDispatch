@@ -409,6 +409,7 @@ export async function publishToTarget(
           const payloadWithImages = {
             ...payload,
             __downloadedImages: downloadedImages,
+            __coverImage: downloadedImages.find((img) => img.url === post.cover?.url) || undefined,
             __imageStrategy: strategy,
           };
           // 发布页需要保留给用户观察/手动操作：不要自动关闭标签页
@@ -763,7 +764,7 @@ function toDomOpenUrl(matcherOrUrl: string) {
 
 /**
  * 在目标平台页面中执行图片上传
- * 
+ *
  * 策略：
  * 1. 在 background (Service Worker) 中下载图片 - 可以绑过 CORS/防盗链
  * 2. 将图片数据（base64）传递给目标平台页面
