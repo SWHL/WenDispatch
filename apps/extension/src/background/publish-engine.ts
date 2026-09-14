@@ -228,6 +228,16 @@ export async function publishToTarget(
 
     const manifest = buildAssetManifestFromPost(processedPost);
     const strategy = getImageStrategy(target.platform);
+    // 知乎封面可能仅存在于 post.cover，单独下载，不能依赖正文资源清单。
+    let zhihuCoverImage: DownloadedImage | undefined;
+    if (target.platform === 'zhihu' && post.cover?.url) {
+      [zhihuCoverImage] = await downloadImagesInBackground([{
+        id: post.cover.id,
+        originalUrl: post.cover.url,
+        metadata: { format: 'jpeg', size: post.cover.size || 0, dataUrl: post.cover.blobUrl },
+        status: 'pending',
+      }]);
+    }
 
     // 处理图片：若目标平台不接受外链，需先上传并替换 URL。
     // domPasteUpload 在“同一发布页”里做粘贴上传更稳定，避免先打开一个空白上传页导致报错/阻塞。
@@ -409,7 +419,7 @@ export async function publishToTarget(
           const payloadWithImages = {
             ...payload,
             __downloadedImages: downloadedImages,
-            __coverImage: downloadedImages.find((img) => img.url === post.cover?.url) || undefined,
+            __coverImage: target.platform === 'zhihu' ? zhihuCoverImage : downloadedImages.find((img) => img.url === post.cover?.url),
             __imageStrategy: strategy,
           };
           // 发布页需要保留给用户观察/手动操作：不要自动关闭标签页

@@ -2,6 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { shouldPreferZhihuHtmlMode, zhihuAdapter } from '../zhihu';
 
 describe('zhihu adapter content mode', () => {
+  it('uses edited Markdown instead of stale collected HTML and preserves the separate cover', async () => {
+    const cover = { id: 'cover', url: 'local://cover.jpg' };
+    const payload = await zhihuAdapter.transform({
+      title: '编辑后的文章',
+      body_md: '当前正文\n\n![正文图片](https://example.com/current.png)',
+      meta: { body_html: '<p>采集时的旧正文</p><img src="https://example.com/old.png">' },
+      cover,
+    } as any, { config: {} });
+
+    expect(payload.contentHtml).toContain('当前正文');
+    expect(payload.contentHtml).toContain('https://example.com/current.png');
+    expect(payload.contentHtml).not.toContain('旧正文');
+    expect(payload.contentHtml).not.toContain('old.png');
+    expect(payload.contentHtml).not.toContain(cover.url);
+    expect(payload.cover).toEqual(cover);
+  });
+
   it('prefers html mode for fenced code blocks and downloaded images', () => {
     expect(shouldPreferZhihuHtmlMode('```ts\nconsole.log(1)\n```', 0)).toBe(true);
     expect(shouldPreferZhihuHtmlMode('plain text', 2)).toBe(true);
