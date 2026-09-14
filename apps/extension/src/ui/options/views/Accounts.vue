@@ -122,7 +122,7 @@ import {
   FIRST_PHASE_PLATFORMS,
   type Account,
 } from '@wendispatch/core';
-import { useMessage } from 'naive-ui';
+import { useMessage, useThemeVars } from 'naive-ui';
 
 const ACCOUNTS_AUTO_REFRESH_THROTTLE_MS = 5 * 1000;
 const ACCOUNTS_AUTO_REFRESH_STORAGE_KEY = 'lastAccountsAutoRefreshAt';
@@ -131,6 +131,7 @@ const AUTO_DETECT_UNBOUND_STORAGE_KEY = 'lastAutoDetectUnboundAt';
 
 defineProps<{ isDark?: boolean }>();
 const message = useMessage();
+const themeVars = useThemeVars();
 const accounts = ref<Account[]>([]);
 const reloginLoadingMap = reactive<Record<string, boolean>>({});
 const loginLoadingMap = reactive<Record<string, boolean>>({});
@@ -519,6 +520,7 @@ async function refreshAllAccounts() {
 <style scoped>
 .accounts-page {
   width: 100%;
+  color: v-bind('themeVars.textColor2');
 }
 
 .page-title {
@@ -537,7 +539,7 @@ async function refreshAllAccounts() {
   justify-content: space-between;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--n-border-color);
+  border-bottom: 1px solid v-bind('themeVars.borderColor');
 }
 
 .section-header-left {
@@ -549,13 +551,13 @@ async function refreshAllAccounts() {
 .section-title {
   font-size: 14px;
   font-weight: 500;
-  color: var(--n-text-color-2);
+  color: v-bind('themeVars.textColor2');
 }
 
 .section-count {
   font-size: 12px;
-  color: var(--n-text-color-3);
-  background: var(--n-color-embedded);
+  color: v-bind('themeVars.textColor3');
+  background: v-bind('themeVars.actionColor');
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -563,7 +565,7 @@ async function refreshAllAccounts() {
 .empty-state {
   padding: 24px;
   text-align: center;
-  color: var(--n-text-color-3);
+  color: v-bind('themeVars.textColor3');
   font-size: 14px;
 }
 
@@ -586,12 +588,12 @@ async function refreshAllAccounts() {
   justify-content: space-between;
   padding: 10px 14px;
   border-radius: 6px;
-  background: var(--n-color-embedded);
+  background: v-bind('themeVars.actionColor');
   transition: background-color 0.15s;
 }
 
 .account-row:hover {
-  background: var(--n-color-embedded-popover);
+  background: v-bind('themeVars.hoverColor');
 }
 
 .account-left {
@@ -613,7 +615,7 @@ async function refreshAllAccounts() {
 }
 
 .account-name:hover {
-  color: var(--n-primary-color);
+  color: v-bind('themeVars.primaryColor');
 }
 
 .account-right {
@@ -668,12 +670,12 @@ async function refreshAllAccounts() {
   justify-content: space-between;
   padding: 10px 14px;
   border-radius: 6px;
-  background: var(--n-color-embedded);
+  background: v-bind('themeVars.actionColor');
   transition: background-color 0.15s;
 }
 
 .platform-row:hover {
-  background: var(--n-color-embedded-popover);
+  background: v-bind('themeVars.hoverColor');
 }
 
 .platform-left {
