@@ -4,7 +4,7 @@
 
 _面向中文用户的多平台博客发布助手：一次编辑，便捷发布到多个常用平台。_
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension%20MV3-4285F4?logo=googlechrome&logoColor=white)](#)
 [![Vue 3](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vuedotjs&logoColor=white)](#)
 
@@ -14,9 +14,13 @@ WenDispatch 是一个本地运行的 Chrome 扩展，统一采集、编辑、预
 
 ## 项目来源与许可证
 
-本项目基于 [SyncCaster](https://github.com/RyanYipeng/SyncCaster) 开发，保留原项目的 Git 历史、MIT License 和原作者版权声明。WenDispatch 自当前仓库起作为独立项目维护，不承诺持续同步上游代码；后续改动将围绕中文博客分发场景进行重构。
+本项目采用 [GNU General Public License v3.0](LICENSE)。由于项目组合、改写并分发了多个上游项目中的代码和资源，发布版本整体按 GPL-3.0 条款提供；各上游项目的原有版权和许可声明继续保留。
 
-内嵌公众号编辑器新增的 18 套排版主题样式来自 [Markdown 中文网的微信 Markdown 编辑器](https://markdown.com.cn/wechat/)。WenDispatch 对这些样式进行了集成与渲染兼容适配，主题名称及原作者署名予以保留。
+代码来源和使用范围：
+
+- [Wechatsync](https://github.com/wechatsync/Wechatsync)：平台发布适配器及浏览器端自动化流程，包括 CSDN、知乎、微信公众号、博客园和稀土掘金等平台的内容填充、图片处理和草稿操作。相关代码位于 `packages/adapters/`。
+- [SyncCaster](https://github.com/RyanYipeng/SyncCaster)：项目基础架构和扩展运行链路，包括扩展、Agent/MCP 桥接、协议及任务调度等部分；相关代码位于 `apps/`、`packages/agent-protocol/` 和 `apps/agent-bridge/`。
+- [Markdown 中文网微信 Markdown 编辑器](https://markdown.com.cn/wechat/)：内嵌编辑器的微信排版主题和基础样式。相关资源位于 `md/packages/shared/src/configs/theme-css/markdown-cn/`，并在集成时保留来源注释。
 
 ## 第一阶段平台
 
@@ -90,4 +94,4 @@ pnpm dev
 
 ## 致谢
 
-感谢上游项目的原作者及所有贡献者。WenDispatch 遵循 MIT License，完整许可文本见 [`LICENSE`](LICENSE)。
+感谢上游项目的原作者及所有贡献者。WenDispatch 遵循 GPL-3.0，完整许可文本见 [`LICENSE`](LICENSE) 及 [GPL-3.0 官方文本](https://www.gnu.org/licenses/gpl-3.0.html)。
