@@ -190,8 +190,15 @@ async function executeJob(jobId: string) {
     const results: NonNullable<Job['results']> = [];
 
     const total = job.targets.length;
+    // CSDN's editor only reliably processes synthetic paste/file events while
+    // its tab is foregrounded. A multi-platform job must still give CSDN the
+    // foreground even when another target is queued.
     const activeTab = total === 1;
-    const concurrency = Math.min(4, Math.max(1, total));
+    // Zhihu uploads images through foreground paste/drop handlers. Keep only
+    // Zhihu targets serialized and focused; other platforms can still run in
+    // parallel so adding Zhihu does not unnecessarily slow the whole batch.
+    const zhihuTargets = job.targets.filter((target) => target.platform === 'zhihu');
+    const otherTargets = job.targets.filter((target) => target.platform !== 'zhihu');
     let completed = 0;
 
     const updateProgress = async () => {
@@ -212,7 +219,9 @@ async function executeJob(jobId: string) {
 
       let result;
       try {
-        result = await publishToTarget(jobId, post as any, target as any, { activeTab });
+        result = await publishToTarget(jobId, post as any, target as any, {
+          activeTab: activeTab || target.platform === 'zhihu' || target.platform === 'csdn',
+        });
       } catch (error) {
         const normalized = normalizePublishResultError(error);
         logger.error('target', `Uncaught publishToTarget error for ${target.platform}`, {
@@ -338,7 +347,8 @@ async function executeJob(jobId: string) {
       await updateProgress();
     };
 
-    const queue = [...job.targets];
+    const queue = [...otherTargets];
+    const concurrency = Math.min(4, Math.max(1, otherTargets.length));
     const workers = Array.from({ length: concurrency }, async () => {
       while (queue.length > 0) {
         if (await shouldStop()) return;
@@ -350,6 +360,12 @@ async function executeJob(jobId: string) {
 
     await updateProgress();
     await Promise.all(workers);
+
+    // Run Zhihu after the background-safe platforms finish. This avoids
+    // foreground tab contention while preserving parallelism elsewhere.
+    for (const target of zhihuTargets) {
+      await runTarget(target);
+    }
 
     const latest = await db.jobs.get(jobId);
     if (!latest || latest.state !== 'RUNNING') {

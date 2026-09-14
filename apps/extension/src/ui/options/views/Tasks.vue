@@ -4,7 +4,7 @@
       <div>
         <h2
           class="text-2xl font-bold"
-          :class="isDark ? 'text-gray-100' : 'text-gray-800'"
+          :class="isDark ? 'text-[#f3f4f6]' : 'text-[#1f2937]'"
         >
           发布中心
         </h2>
@@ -67,15 +67,15 @@
             v-for="tab in filterTabs"
             :key="tab.key"
             type="button"
-            class="rounded-md px-3 py-1.5 text-sm"
+            class="appearance-none rounded-md border px-3 py-1.5 text-sm transition-colors"
             :class="
               filter === tab.key
                 ? isDark
-                  ? 'bg-[#344047] text-white'
-                  : 'bg-[#e7f3ee] text-[#16804c]'
+                  ? 'border-[#789186] bg-[#344047] text-white'
+                  : 'border-[#9bb5a8] bg-[#e7f3ee] text-[#16804c]'
                 : isDark
-                  ? 'text-gray-400 hover:bg-gray-700'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
             "
             @click="filter = tab.key"
           >
@@ -153,8 +153,8 @@
                 <div class="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    class="truncate text-left font-semibold hover:underline"
-                    :class="isDark ? 'text-gray-100' : 'text-gray-800'"
+                    class="appearance-none truncate border-0 bg-transparent p-0 text-left font-semibold hover:underline"
+                    :class="isDark ? 'text-[#f3f4f6]' : 'text-[#1f2937]'"
                     :title="getPostTitle(job.postId)"
                     @click="openPost(job.postId)"
                   >
@@ -183,7 +183,7 @@
               </button>
               <button
                 type="button"
-                class="inline-flex h-8 w-8 items-center justify-center rounded text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                class="inline-flex h-8 w-8 appearance-none items-center justify-center rounded border-0 bg-transparent text-sm disabled:cursor-not-allowed disabled:opacity-40"
                 :class="
                   isDark
                     ? 'text-[#d39b9b] hover:bg-[#4a3030]'
@@ -240,11 +240,11 @@
                 <button
                   v-if="canOpenResult(result)"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs"
+                  class="inline-flex appearance-none items-center gap-1 rounded border px-2 py-1 text-xs transition-colors"
                   :class="
                     isDark
-                      ? 'text-gray-300 hover:bg-gray-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
                   "
                   @click="openTarget(job, index)"
                 >
@@ -252,11 +252,11 @@
                 ><button
                   v-if="canMarkResult(result)"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs"
+                  class="inline-flex appearance-none items-center gap-1 rounded border px-2 py-1 text-xs transition-colors"
                   :class="
                     isDark
-                      ? 'bg-[#344047] text-gray-100'
-                      : 'bg-[#e7f3ee] text-[#486b5a]'
+                      ? 'border-[#789186] bg-[#344047] text-gray-100'
+                      : 'border-[#abc4b5] bg-[#e7f3ee] text-[#486b5a]'
                   "
                   @click="markPublished(job, index)"
                 >
@@ -264,11 +264,11 @@
                 ><button
                   v-if="canRetryResult(result)"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs"
+                  class="inline-flex appearance-none items-center gap-1 rounded border px-2 py-1 text-xs transition-colors"
                   :class="
                     isDark
-                      ? 'text-gray-300 hover:bg-gray-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
                   "
                   @click="retryResult(job, index)"
                 >

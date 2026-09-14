@@ -828,6 +828,10 @@ async function exportAsPng(title: string) {
 </script>
 
 <style scoped>
+:global(html.dark), :global(body.dark) {
+  color-scheme: dark;
+}
+
 /* 确保渐变文字显示正确 */
 .bg-clip-text {
   -webkit-background-clip: text;

@@ -191,7 +191,7 @@
     <!-- 发布对话框 -->
     <Teleport to="body">
       <div v-if="showPublishDialog" class="modal-overlay" @click.self="closePublishDialog">
-        <div class="publish-dialog" @click.stop>
+        <div class="publish-dialog" :class="{ dark: isDark }" @click.stop>
           <div class="dialog-header">
             <h3>发布文章</h3>
             <button @click="closePublishDialog" class="close-btn" title="关闭"><AppIcon name="xmark" /></button>
@@ -226,6 +226,10 @@
                 <div>暂无已登录的账号</div>
                 <button @click="goToAccounts">前往添加账号 <AppIcon name="arrowRight" class="ml-1" /></button>
               </div>
+              <div v-if="hasZhihuSelection" class="zhihu-notice" role="status">
+                <AppIcon name="warning" />
+                <span>已选择知乎。知乎图片上传依赖前台编辑器，发布期间插件会自动切换到知乎页面，请保持浏览器开启；其他平台会先并行发布，知乎随后在前台处理。</span>
+              </div>
             </div>
           </div>
           <div class="dialog-footer">
@@ -240,7 +244,7 @@
     <!-- 未保存修改确认弹窗 -->
     <Teleport to="body">
       <div v-if="showUnsavedDialog" class="modal-overlay" @click.self="handleCancelLeave">
-        <div class="unsaved-dialog" @click.stop @keydown.enter="handleSaveAndLeave" @keydown.escape="handleCancelLeave">
+        <div class="unsaved-dialog" :class="{ dark: isDark }" @click.stop @keydown.enter="handleSaveAndLeave" @keydown.escape="handleCancelLeave">
           <AppIcon name="article" class="unsaved-dialog-icon" />
           <div class="unsaved-dialog-title">文章尚未保存</div>
           <div class="unsaved-dialog-message">是否保存当前修改？</div>
@@ -298,6 +302,9 @@ const showPublishDialog = ref(false);
 const publishing = ref(false);
 const enabledAccounts = ref<Account[]>([]);
 const selectedAccounts = ref<string[]>([]);
+const hasZhihuSelection = computed(() => selectedAccounts.value.some((id) =>
+  enabledAccounts.value.find((account) => account.id === id)?.platform === 'zhihu',
+));
 
 const editorRef = ref<HTMLTextAreaElement | null>(null);
 const previewRef = ref<HTMLDivElement | null>(null);
@@ -1454,20 +1461,30 @@ onUnmounted(() => {
 }
 
 .publish-dialog { background: white; border-radius: 16px; width: 100%; max-width: 580px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+.publish-dialog.dark { background: #1f2937; color: #e5e7eb; }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; }
+.publish-dialog.dark .dialog-header { border-bottom-color: #374151; }
 .dialog-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
 .close-btn { width: 24px; height: 24px; border: none; background: #f3f4f6; border-radius: 6px; font-size: 14px; cursor: pointer; color: #6b7280; transition: all 0.2s; }
 .close-btn:hover { background: #e5e7eb; color: #374151; }
+.publish-dialog.dark .close-btn { background: #374151; color: #d1d5db; }
+.publish-dialog.dark .close-btn:hover { background: #4b5563; color: #f3f4f6; }
 .dialog-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
 .article-info { background: #f9fafb; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+.publish-dialog.dark .article-info { background: #111827; }
 .info-label { font-size: 10px; color: #6b7280; margin-bottom: 3px; }
 .info-value { font-size: 13px; font-weight: 600; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.publish-dialog.dark .info-value { color: #f3f4f6; }
 .info-meta { font-size: 10px; color: #9ca3af; margin-top: 4px; }
 .platform-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .platform-header span { font-size: 12px; font-weight: 600; color: #374151; }
+.publish-dialog.dark .platform-header span { color: #e5e7eb; }
 .select-all-btn { font-size: 11px; color: #3b82f6; background: none; border: none; cursor: pointer; }
 .account-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .account-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+.publish-dialog.dark .account-item { border-color: #4b5563; }
+.publish-dialog.dark .account-item:hover { background: #374151; border-color: #6b7280; }
+.publish-dialog.dark .account-item.selected { border-color: #789b8c; background: #263a33; }
 .account-item:hover { background: #f9fafb; border-color: #d1d5db; }
 .account-item.selected { border-color: #3b82f6; background: #eff6ff; }
 .account-item.disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1475,6 +1492,7 @@ onUnmounted(() => {
 .account-item .avatar { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; }
 .account-info { flex: 1; min-width: 0; overflow: hidden; }
 .nickname { font-size: 11px; font-weight: 500; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.publish-dialog.dark .nickname { color: #f3f4f6; }
 .platform { font-size: 10px; color: #6b7280; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .status-tag { font-size: 9px; padding: 1px 4px; border-radius: 3px; }
 .status-tag.expired { background: #fee2e2; color: #dc2626; }
@@ -1482,10 +1500,15 @@ onUnmounted(() => {
 .no-accounts { text-align: center; padding: 20px; color: #6b7280; grid-column: span 2; }
 .no-accounts div:first-child { font-size: 24px; margin-bottom: 6px; }
 .no-accounts button { margin-top: 8px; color: #3b82f6; background: none; border: none; cursor: pointer; font-size: 11px; }
+.zhihu-notice { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; padding: 8px 10px; border: 1px solid #fcd34d; border-radius: 6px; background: #fffbeb; color: #92400e; font-size: 11px; line-height: 1.5; }
+.zhihu-notice svg { flex: 0 0 auto; margin-top: 1px; }
+.publish-dialog.dark .zhihu-notice { border-color: #92400e; background: #422006; color: #fde68a; }
 .dialog-footer { padding: 12px 14px; border-top: 1px solid #e5e7eb; }
+.publish-dialog.dark .dialog-footer { border-top-color: #374151; }
 .publish-btn { width: 100%; padding: 8px; font-size: 12px; font-weight: 600; background: #526d62; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
 .publish-btn:hover:not(:disabled) { background: #465e55; }
 .publish-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+.publish-dialog.dark .publish-btn:disabled { background: #4b5563; color: #9ca3af; }
 
 /* 暗色模式 */
 .markdown-preview.dark blockquote { background: #2a3337; border-left: 2px solid #53645c; color: #d1d5db; }
@@ -1507,8 +1530,10 @@ onUnmounted(() => {
 
 /* 未保存确认弹窗 */
 .unsaved-dialog { background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); }
+.unsaved-dialog.dark { background: #1f2937; color: #e5e7eb; }
 .unsaved-dialog-icon { font-size: 36px; margin-bottom: 12px; }
 .unsaved-dialog-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px; }
+.unsaved-dialog.dark .unsaved-dialog-title { color: #f3f4f6; }
 .unsaved-dialog-message { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
 .unsaved-dialog-actions { display: flex; flex-direction: column; gap: 8px; }
 .unsaved-btn { padding: 10px 16px; font-size: 13px; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; outline: none; }
@@ -1517,6 +1542,10 @@ onUnmounted(() => {
 .unsaved-btn-primary:hover { background: #2563eb; }
 .unsaved-btn-secondary { background: #f3f4f6; color: #374151; }
 .unsaved-btn-secondary:hover { background: #e5e7eb; }
+.unsaved-dialog.dark .unsaved-btn-secondary { background: #374151; color: #e5e7eb; }
+.unsaved-dialog.dark .unsaved-btn-secondary:hover { background: #4b5563; }
 .unsaved-btn-cancel { background: transparent; color: #9ca3af; }
 .unsaved-btn-cancel:hover { color: #6b7280; background: #f9fafb; }
+.unsaved-dialog.dark .unsaved-btn-cancel { color: #9ca3af; }
+.unsaved-dialog.dark .unsaved-btn-cancel:hover { color: #e5e7eb; background: #374151; }
 </style>

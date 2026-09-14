@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p release/assets
           cd apps/extension/dist
-          zip -r ../../../release/assets/synccaster-${{ steps.version.outputs.version }}.zip .
+          zip -r ../../../release/assets/wendispatch-${{ steps.version.outputs.version }}.zip .
 
       - name: Check CRX signing key
         id: crx
@@ -80,7 +80,7 @@ jobs:
           echo "$CRX_PRIVATE_KEY" > extension.pem
 
           # Create CRX file
-          crx pack apps/extension/dist -o release/assets/synccaster-${{ steps.version.outputs.version }}.crx -p extension.pem
+          crx pack apps/extension/dist -o release/assets/wendispatch-${{ steps.version.outputs.version }}.crx -p extension.pem
 
           # Clean up private key
           rm -f extension.pem
@@ -88,8 +88,8 @@ jobs:
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: synccaster-zip
-          path: release/assets/synccaster-${{ steps.version.outputs.version }}.zip
+          name: wendispatch-zip
+          path: release/assets/wendispatch-${{ steps.version.outputs.version }}.zip
           if-no-files-found: error
 
       - name: Upload CRX artifact
@@ -98,8 +98,8 @@ jobs:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
         uses: actions/upload-artifact@v4
         with:
-          name: synccaster-crx
-          path: release/assets/synccaster-${{ steps.version.outputs.version }}.crx
+          name: wendispatch-crx
+          path: release/assets/wendispatch-${{ steps.version.outputs.version }}.crx
           if-no-files-found: ignore
 
   release:
@@ -114,13 +114,13 @@ jobs:
       - name: Download ZIP artifact
         uses: actions/download-artifact@v4
         with:
-          name: synccaster-zip
+          name: wendispatch-zip
           path: release/assets
 
       - name: Download CRX artifact
         uses: actions/download-artifact@v4
         with:
-          name: synccaster-crx
+          name: wendispatch-crx
           path: release/assets
         continue-on-error: true
 
@@ -131,34 +131,34 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: SyncCaster ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
           draft: false
           prerelease: false
           files: |
-            release/assets/synccaster-*.zip
-            release/assets/synccaster-*.crx
+            release/assets/wendispatch-*.zip
+            release/assets/wendispatch-*.crx
           fail_on_unmatched_files: false
           body: |
-            ## SyncCaster ${{ steps.tag.outputs.tag }}
+            ## wendispatch ${{ steps.tag.outputs.tag }}
 
             ### Download
 
             | File | Description |
             |------|-------------|
-            | `synccaster-*.zip` | Unpacked extension (for developer mode) |
-            | `synccaster-*.crx` | Packed extension (requires developer mode) |
+            | `wendispatch-*.zip` | Unpacked extension (for developer mode) |
+            | `wendispatch-*.crx` | Packed extension (requires developer mode) |
 
             ### Installation
 
             **Install from ZIP**
-            1. Download `synccaster-*.zip` from the assets below
+            1. Download `wendispatch-*.zip` from the assets below
             2. Extract the ZIP file to a folder
             3. Open Chrome and go to `chrome://extensions/`
             4. Enable "Developer mode" (toggle in top right)
             5. Click "Load unpacked" and select the extracted folder
 
             **Install from CRX**
-            1. Download `synccaster-*.crx` from the assets below
+            1. Download `wendispatch-*.crx` from the assets below
             2. Open Chrome and go to `chrome://extensions/`
             3. Enable "Developer mode" (toggle in top right)
             4. Drag and drop the `.crx` file onto the extensions page

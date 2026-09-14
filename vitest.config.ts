@@ -1,7 +1,11 @@
 import { resolve } from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  test: {
+    // pnpm's local store can contain workspace source copies, including tests.
+    exclude: [...configDefaults.exclude, '**/.pnpm-store/**'],
+  },
   resolve: {
     alias: {
       '@wendispatch/core': resolve(__dirname, './packages/core/src'),

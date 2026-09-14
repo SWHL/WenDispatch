@@ -127,6 +127,10 @@ export const zhihuAdapter: PlatformAdapter = {
         });
         return doc.body.innerHTML;
       };
+      const htmlToPlainTextLocal = (html: string): string => {
+        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        return (doc.body.textContent || '').replace(/\u00a0/g, ' ');
+      };
       
       const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
       
@@ -262,12 +266,11 @@ export const zhihuAdapter: PlatformAdapter = {
                   resolve({ url, isBlob: false });
                   return true;
                 } else if (url.startsWith('blob:')) {
-                  // 立即返回 blob URL，不再等待（优化用户体验）
-                  observer.disconnect();
-                  if (timer) clearTimeout(timer);
-                  console.log('[zhihu] Found blob URL, returning immediately:', url);
-                  resolve({ url, isBlob: true });
-                  return true;
+                  // Blob URLs are only temporary placeholders while Zhihu is
+                  // uploading. Keep observing until the final zhimg.com URL
+                  // appears; treating the blob as success suppresses retries
+                  // and can leave the last image missing from the draft.
+                  console.log('[zhihu] Found temporary blob URL; waiting for final URL:', url);
                 }
               }
               return false;
@@ -292,10 +295,11 @@ export const zhihuAdapter: PlatformAdapter = {
         };
 
         // 通过 DOM 粘贴方式上传图片
-        const uploadImageViaPaste = async (
+        const uploadImageViaPasteOnce = async (
           editor: HTMLElement,
           base64: string,
-          mimeType: string
+          mimeType: string,
+          timeoutMs = 12000,
         ): Promise<{ url: string | null; isBlob: boolean }> => {
           try {
             // 1. 将 base64 转换为 File 对象
@@ -343,7 +347,7 @@ export const zhihuAdapter: PlatformAdapter = {
 
             // 7. 等待新 URL 出现（知乎上传图片后会生成 zhimg.com 的 URL）
             console.log('[zhihu] Waiting for new image URL...');
-            const result = await waitForNewImageUrl(editor, beforeUrls, 20000);
+            const result = await waitForNewImageUrl(editor, beforeUrls, timeoutMs);
 
             if (result.url) {
               console.log('[zhihu] Got new image URL:', result.url, 'isBlob:', result.isBlob);
@@ -356,6 +360,29 @@ export const zhihuAdapter: PlatformAdapter = {
             console.error('[zhihu] uploadImageViaPaste error:', e);
             return { url: null, isBlob: false };
           }
+        };
+
+        // Zhihu occasionally drops a paste while its editor is busy. Retry a
+        // failed upload with a fresh DataTransfer and backoff; success is
+        // detected by a newly inserted image URL, so retries do not duplicate
+        // an image that already made it into the document.
+        const uploadImageViaPaste = async (
+          editor: HTMLElement,
+          base64: string,
+          mimeType: string,
+        ): Promise<{ url: string | null; isBlob: boolean }> => {
+          const maxAttempts = 3;
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const result = await uploadImageViaPasteOnce(editor, base64, mimeType);
+            if (result.url) return result;
+            if (attempt < maxAttempts) {
+              const delay = 600 * 2 ** (attempt - 1);
+              console.warn(`[zhihu] Image upload failed, retrying (${attempt + 1}/${maxAttempts}) in ${delay}ms`);
+              await sleep(delay);
+              editor = await waitForAny(editorSelectors);
+            }
+          }
+          return { url: null, isBlob: false };
         };
 
         // v9 策略：分步填充 - 先用占位符替代图片，填充文本后再在占位符位置插入图片
@@ -447,7 +474,12 @@ export const zhihuAdapter: PlatformAdapter = {
 
         const contentMarkdown = String((payload as any).contentMarkdown || '');
         const contentHtml = stripEmptyHtmlParagraphsLocal(String((payload as any).contentHtml || ''));
-        const useMarkdown = !shouldPreferZhihuHtmlModeLocal(contentMarkdown, imagePlaceholders.size) && !!contentMarkdown;
+        // The current Zhihu editor has an unstable Markdown paste parser: it
+        // flattens headings, lists and thematic breaks in long documents.
+        // Use our normalized HTML representation for deterministic blocks;
+        // image URLs have already been replaced with placeholders and are
+        // uploaded into those positions afterwards.
+        const useMarkdown = !contentHtml && !!contentMarkdown;
         const contentToFill = useMarkdown ? contentMarkdown : contentHtml;
 
         console.log('[zhihu] Content mode:', useMarkdown ? 'Markdown' : 'HTML');
@@ -463,28 +495,22 @@ export const zhihuAdapter: PlatformAdapter = {
         const editor = await waitForAny(editorSelectors);
         console.log('[zhihu] Editor found:', editor.tagName, editor.className);
 
-        // 检查编辑器中是否已有内容（图片）
-        const hasExistingContent = editor.innerHTML.trim().length > 0;
-
         // 聚焦编辑器
         editor.focus();
         await sleep(200);
-
-        // 如果编辑器中已有内容（图片），将光标移到末尾
-        if (hasExistingContent) {
-          console.log('[zhihu] 编辑器中已有内容（图片），将光标移到末尾');
-          try {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(editor);
-            range.collapse(false);  // false = 折叠到末尾
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-            await sleep(100);
-          } catch (e) {
-            console.warn('[zhihu] 移动光标失败:', e);
-          }
+        // Select any existing Draft.js content so the paste replaces it. Do
+        // not call execCommand('delete') here: Draft.js keeps its own state
+        // and a DOM-only deletion makes the following paste get ignored.
+        try {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        } catch (e) {
+          console.warn('[zhihu] 选择旧编辑器内容失败:', e);
         }
+        await sleep(100);
 
         // 使用 DataTransfer + ClipboardEvent 模拟真实粘贴事件
         // Draft.js 编辑器需要通过 clipboardData 获取粘贴内容
@@ -499,7 +525,7 @@ export const zhihuAdapter: PlatformAdapter = {
             dt.setData('text/plain', contentToPaste);
           } else {
             dt.setData('text/html', contentToPaste);
-            dt.setData('text/plain', editor.innerText || '');
+            dt.setData('text/plain', htmlToPlainTextLocal(contentToPaste));
           }
 
           const pasteEvent = new ClipboardEvent('paste', {
@@ -520,7 +546,7 @@ export const zhihuAdapter: PlatformAdapter = {
               dt.setData('text/plain', contentToPaste);
             } else {
               dt.setData('text/html', contentToPaste);
-              dt.setData('text/plain', editor.innerText || '');
+              dt.setData('text/plain', htmlToPlainTextLocal(contentToPaste));
             }
 
             const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
@@ -598,7 +624,7 @@ export const zhihuAdapter: PlatformAdapter = {
           console.log('[zhihu] Step 3.5: 在占位符位置插入图片', { count: imagePlaceholders.size });
 
           // 重新获取编辑器（Markdown 解析后 DOM 可能已更新）
-          const editorForImages = await waitForAny(editorSelectors);
+          let editorForImages = await waitForAny(editorSelectors);
           await sleep(500);
 
           // 在编辑器中查找并替换占位符
@@ -606,6 +632,7 @@ export const zhihuAdapter: PlatformAdapter = {
             placeholder: string,
             imageData: { base64: string; mimeType: string }
           ): Promise<boolean> => {
+            editorForImages = await waitForAny(editorSelectors);
             // 使用 TreeWalker 遍历所有文本节点
             const walker = document.createTreeWalker(
               editorForImages,
@@ -635,29 +662,15 @@ export const zhihuAdapter: PlatformAdapter = {
                   document.execCommand('delete', false);
                   await sleep(100);
 
-                  // 3. 在该位置粘贴图片
-                  const blob = dataUrlToBlob(imageData.base64);
-                  const ext = imageData.mimeType.includes('png') ? 'png' : imageData.mimeType.includes('gif') ? 'gif' : 'jpg';
-                  const file = new File([blob], `image_${Date.now()}.${ext}`, { type: imageData.mimeType });
-
-                  const dt = new DataTransfer();
-                  dt.items.add(file);
-
-                  // 记录粘贴前的图片 URL
-                  const beforeUrls = new Set(collectImageUrls(editorForImages));
-
-                  // 尝试 paste 事件
-                  const pasteEvent = new ClipboardEvent('paste', {
-                    bubbles: true,
-                    cancelable: true,
-                    clipboardData: dt
-                  });
-                  Object.defineProperty(pasteEvent, 'clipboardData', { get: () => dt });
-                  editorForImages.dispatchEvent(pasteEvent);
-
-                  // 4. 等待图片上传
-                  console.log('[zhihu] Waiting for image upload...');
-                  const result = await waitForNewImageUrl(editorForImages, beforeUrls, 15000);
+                  // Draft.js may rebuild the editor after deleting the text
+                  // selection. Resolve the live editor again, then use the
+                  // same drop/paste fallback as standalone image uploads.
+                  editorForImages = await waitForAny(editorSelectors);
+                  const result = await uploadImageViaPaste(
+                    editorForImages,
+                    imageData.base64,
+                    imageData.mimeType,
+                  );
 
                   if (result.url) {
                     console.log('[zhihu] Image uploaded successfully:', result.url);
@@ -669,7 +682,7 @@ export const zhihuAdapter: PlatformAdapter = {
                   await sleep(300);
                   removeImageCaptions(editorForImages);
 
-                  return true;
+                  return !!result.url;
                 } catch (e) {
                   console.error('[zhihu] Error replacing placeholder:', placeholder, e);
                   return false;
@@ -682,13 +695,27 @@ export const zhihuAdapter: PlatformAdapter = {
           };
 
           // 逐个处理占位符
+          const failedImagePlaceholders: string[] = [];
           for (const [placeholder, imageData] of imagePlaceholders) {
             console.log('[zhihu] Processing placeholder:', placeholder);
-            await findAndReplacePlaceholder(placeholder, imageData);
+            const uploaded = await findAndReplacePlaceholder(placeholder, imageData);
+            if (!uploaded) failedImagePlaceholders.push(placeholder);
             await sleep(500);
           }
 
           console.log('[zhihu] All image placeholders processed');
+          if (failedImagePlaceholders.length > 0) {
+            console.warn('[zhihu] Images failed after retries:', failedImagePlaceholders);
+            return {
+              url: window.location.href,
+              __synccasterError: {
+                message: `知乎有 ${failedImagePlaceholders.length} 张图片上传失败（已自动重试 3 次），请检查编辑器后手动补图`,
+                failedImages: failedImagePlaceholders,
+                retryExhausted: true,
+              },
+              __synccasterNote: '部分图片上传失败，请检查编辑器后再发布',
+            } as any;
+          }
         }
 
         // 4. 内容填充完成，不执行发布操作

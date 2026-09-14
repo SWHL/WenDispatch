@@ -114,9 +114,9 @@ export function reconcileCsdnUploadedMarkdown(
     else inserted.push(token);
   }
 
-  const uploadedToken =
-    inserted.find((token) => /(?:i-blog|img-blog)\.csdnimg\.cn/i.test(token)) ||
-    inserted[0];
+  const uploadedToken = inserted.find((token) =>
+    /(?:i-blog|img-blog)\.csdnimg\.cn/i.test(token),
+  );
   return uploadedToken
     ? beforeUpload.replace(placeholder, uploadedToken)
     : null;
@@ -1432,10 +1432,13 @@ export const csdnAdapter: PlatformAdapter = {
           else inserted.push(token);
         }
 
-        const uploadedToken =
-          inserted.find((token) =>
-            /(?:i-blog|img-blog)\.csdnimg\.cn/i.test(token),
-          ) || inserted[0];
+        // CSDN inserts an `img-home.csdnimg.cn` error placeholder when its
+        // server side transfer cannot fetch the source. Treat that token as
+        // a failed attempt so the caller can retry via the alternate upload
+        // route; accepting it here permanently loses the original image.
+        const uploadedToken = inserted.find((token) =>
+          /(?:i-blog|img-blog)\.csdnimg\.cn/i.test(token),
+        );
         return uploadedToken
           ? beforeUpload.replace(placeholder, uploadedToken)
           : null;
@@ -1471,8 +1474,13 @@ export const csdnAdapter: PlatformAdapter = {
         beforeUpload: string,
         placeholder: string,
       ): Promise<string | null> => {
-        const methods: Array<'file' | 'paste'> = preferredImageUpload === 'file'
+        const preferredMethods: Array<'file' | 'paste'> = preferredImageUpload === 'file'
           ? ['file', 'paste'] : ['paste', 'file'];
+        // CSDN's upload handler can occasionally acknowledge the file but fail
+        // to update the editor. Try the alternate route once before giving up,
+        // while reconciling against the placeholder so a late success is not
+        // mistaken for a failed duplicate.
+        const methods: Array<'file' | 'paste'> = preferredMethods;
         let startedAttempts = 0;
         for (const method of methods) {
           const started = Date.now();
@@ -1818,7 +1826,11 @@ export const csdnAdapter: PlatformAdapter = {
           string,
           { base64: string; mimeType: string; fallbackMarkdown: string }
         >();
-        let markdownProcessed = String((payload as any).contentMarkdown || '');
+        let markdownProcessed = String((payload as any).contentMarkdown || '')
+          // CSDN's uploader cannot reconcile an image wrapped in a link and
+          // leaves the trailing `](target)` fragment behind. Flatten linked
+          // images before replacing URLs with upload placeholders.
+          .replace(/\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)/g, '![$1]($2)');
 
         if (downloadedImages && downloadedImages.length > 0) {
           console.log('[csdn] 处理图片 - 使用占位符替代待转存图片链接', {
