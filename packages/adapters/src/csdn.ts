@@ -166,6 +166,7 @@ export const csdnAdapter: PlatformAdapter = {
       tags: post.tags?.slice(0, 5),
       categories: post.categories,
       summary: post.summary,
+      cover: post.cover,
       meta: { assets: post.assets || [] },
     };
   },
@@ -1157,62 +1158,38 @@ export const csdnAdapter: PlatformAdapter = {
       };
 
       const findBestRichEditor = (): HTMLElement | null => {
-        const candidates = queryAllDeep(
-          '.ProseMirror, .ql-editor, [contenteditable="true"], [role="textbox"]',
-        )
-          .map((e) => e as HTMLElement)
-          .filter(
-            (e) =>
-              isVisible(e) && isEditableTextControl(e) && !isLikelyTitle(e),
-          );
-        if (!candidates.length) return null;
-        candidates.sort((a, b) => getRectArea(b) - getRectArea(a));
-        return candidates[0] || null;
-      };
-
-      const dispatchPaste = async (
-        target: HTMLElement,
-        data: { html?: string; text: string },
-      ) => {
-        const doc = target.ownerDocument;
-        const win = doc.defaultView || window;
-        try {
-          target.focus();
-          const sel = win.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            const range = doc.createRange();
-            range.selectNodeContents(target);
-            sel.addRange(range);
-          }
+        // CSDN's rich editor uses a same-origin iframe. Do not consider the
+        // top-level summary textarea or the cross-origin AI assistant.
+        for (const frame of Array.from(document.querySelectorAll('iframe'))) {
           try {
-            doc.execCommand?.('delete');
-          } catch {}
-
-          const DT =
-            (win as any).DataTransfer || (globalThis as any).DataTransfer;
-          const dt = new DT();
-          if (data.html) dt.setData('text/html', data.html);
-          dt.setData('text/plain', data.text);
-          const CE =
-            (win as any).ClipboardEvent || (globalThis as any).ClipboardEvent;
-          const evt = new CE('paste', {
-            bubbles: true,
-            cancelable: true,
-          } as any);
-          Object.defineProperty(evt, 'clipboardData', { get: () => dt });
-          target.dispatchEvent(evt);
-          await sleep(300);
-        } catch {}
+            const body = frame.contentDocument?.body;
+            if (body && isVisible(frame) && body.isContentEditable) return body;
+          } catch { /* Cross-origin assistant frame. */ }
+        }
+        return queryAllDeep('.ProseMirror[contenteditable="true"], .ql-editor[contenteditable="true"]')
+          .map((el) => el as HTMLElement).find(isVisible) || null;
       };
 
       const fillRichEditor = async (
         editor: HTMLElement,
         html: string,
-        fallbackText: string,
       ) => {
         const doc = editor.ownerDocument;
         const win = doc.defaultView || window;
+
+        const ckeditor = Object.values((window as any).CKEDITOR?.instances || {})
+          .find((instance: any) => instance.editable?.()?.$ === editor) as any;
+        if (ckeditor?.setData) {
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('CSDN 正文编辑器写入超时')), 15000);
+            ckeditor.setData(html, () => {
+              clearTimeout(timer);
+              ckeditor.fire('change');
+              resolve();
+            });
+          });
+          return;
+        }
 
         try {
           const QuillCtor = (win as any).Quill;
@@ -1231,24 +1208,16 @@ export const csdnAdapter: PlatformAdapter = {
           }
         } catch {}
 
-        await dispatchPaste(editor, {
-          html: html || undefined,
-          text: fallbackText,
-        });
+        editor.focus();
+        const selection = win.getSelection();
+        const range = doc.createRange();
+        range.selectNodeContents(editor);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        if (!doc.execCommand?.('insertHTML', false, html)) editor.innerHTML = html;
+        editor.dispatchEvent(new win.Event('input', { bubbles: true }));
+        editor.dispatchEvent(new win.Event('change', { bubbles: true }));
 
-        try {
-          editor.focus();
-          const ok = doc.execCommand?.('insertHTML', false, html);
-          if (!ok) {
-            editor.innerHTML = html || `<p>${fallbackText}</p>`;
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
-            editor.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        } catch {
-          editor.innerHTML = html || `<p>${fallbackText}</p>`;
-          editor.dispatchEvent(new Event('input', { bubbles: true }));
-          editor.dispatchEvent(new Event('change', { bubbles: true }));
-        }
       };
 
       // ========== 图片处理辅助函数 ==========
@@ -1832,7 +1801,7 @@ export const csdnAdapter: PlatformAdapter = {
           // images before replacing URLs with upload placeholders.
           .replace(/\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)/g, '![$1]($2)');
 
-        if (downloadedImages && downloadedImages.length > 0) {
+        if (isMarkdownEditorPage() && downloadedImages && downloadedImages.length > 0) {
           console.log('[csdn] 处理图片 - 使用占位符替代待转存图片链接', {
             count: downloadedImages.length,
           });
@@ -1883,9 +1852,6 @@ export const csdnAdapter: PlatformAdapter = {
         const markdown = markdownProcessed;
         let expectedMarkdown = markdown;
         const html = String((payload as any).contentHtml || '');
-        const fallbackText = html
-          ? htmlToPlainText(html) || markdown
-          : markdown;
         console.log('[csdn-fill] Content length:', markdown.length);
         console.log(
           '[csdn-fill] Image placeholders count:',
@@ -1936,33 +1902,35 @@ export const csdnAdapter: PlatformAdapter = {
           })),
         );
 
-        const ok =
-          (findCsdnEditor() ? await tryFillContentEditable(markdown) : false) ||
-          tryFillCodeMirror5(markdown) ||
-          tryFillMonaco(markdown) ||
-          (await tryFillCodeMirror6(markdown)) ||
-          tryFillTextarea(markdown) ||
-          (await tryFillContentEditable(markdown)) ||
-          (await tryFillGenericEditable(markdown)) ||
-          hasExpectedEditorContent(markdown);
+        if (isMarkdownEditorPage()) {
+          const ok =
+            (findCsdnEditor() ? await tryFillContentEditable(markdown) : false) ||
+            tryFillCodeMirror5(markdown) ||
+            tryFillMonaco(markdown) ||
+            (await tryFillCodeMirror6(markdown)) ||
+            tryFillTextarea(markdown) ||
+            (await tryFillContentEditable(markdown)) ||
+            (await tryFillGenericEditable(markdown)) ||
+            hasExpectedEditorContent(markdown);
 
-        console.log('[csdn-fill] Fill result:', ok);
+          console.log('[csdn-fill] Fill result:', ok);
 
-        if (!ok && isMarkdownEditorPage()) {
-          throw new Error('未找到可写入的 Markdown 编辑器控件');
-        }
-
-        if (!ok) {
-          console.log('[csdn-fill] Trying rich editor fallback');
-          const editor = await waitFor(() => findBestRichEditor(), 25000);
-          await fillRichEditor(editor, html, fallbackText);
-        } else if (isMarkdownEditorPage()) {
-          const stabilized = await stabilizeMarkdownEditor(markdown);
-          if (!stabilized) {
-            throw new Error(
-              'CSDN Markdown 编辑器内容未能保持完整，请检查正文后再发布',
-            );
+          if (!ok && isMarkdownEditorPage()) {
+            throw new Error('未找到可写入的 Markdown 编辑器控件');
           }
+
+          const stabilized = await stabilizeMarkdownEditor(markdown);
+          if (!stabilized) throw new Error('CSDN Markdown 编辑器内容未能保持完整，请检查正文后再发布');
+        } else {
+          // 富文本页的 textarea 是摘要，正文在独立 iframe 内。
+          // 只写入已识别的富文本正文，不能沿用 Markdown 的 textarea 回退。
+          const editor = await waitFor(() => findBestRichEditor(), 25000);
+          await fillRichEditor(editor, html);
+          const expectedText = htmlToPlainText(html).replace(/\s+/g, '');
+          await waitFor(() => {
+            const actual = (editor.textContent || '').replace(/\s+/g, '');
+            return actual === expectedText ? editor : null;
+          }, 5000);
         }
 
         // Fill the title before image uploads. A failed image paste can take
@@ -2080,6 +2048,49 @@ export const csdnAdapter: PlatformAdapter = {
           throw new Error('CSDN 文章标题未能保持，请重试');
         }
 
+        // 独立上传文章封面，不将封面混入正文图片处理。
+        const coverImage = (payload as any).__coverImage as
+          | { base64: string; mimeType?: string }
+          | undefined;
+        let coverStatus: { success: boolean; error?: string } | undefined;
+        if (coverImage) {
+          try {
+            // Markdown 页的按钮只打开设置弹窗；绝不点击弹窗底部的最终发布按钮。
+            const findCoverButton = () => Array.from(document.querySelectorAll('button.upload-img-box'))
+              .find((el) => isVisible(el) && (el.textContent || '').includes('从本地上传')) as HTMLElement | undefined;
+            if (isMarkdownEditorPage() && !findCoverButton()) {
+              const openSettings = document.querySelector('.operate-box .btn-publish') as HTMLButtonElement | null;
+              if (!openSettings || !isVisible(openSettings)) throw new Error('未找到 CSDN 发布设置入口');
+              openSettings.click();
+            }
+            const coverTrigger = await waitFor(() => findCoverButton() || null, 10000);
+            // 使用实际 DOM 中封面按钮的同级 input；不点击按钮，以免唤起系统文件选择框。
+            const input = coverTrigger.parentElement?.querySelector('input.el-upload__input[type="file"]') as HTMLInputElement | null;
+            const previewBox = coverTrigger.closest('.preview-box');
+            if (!input || !previewBox) throw new Error('未找到 CSDN 封面专用上传控件');
+            const oldPreview = previewBox.querySelector('img.preview')?.getAttribute('src') || '';
+            const file = createImageFile({ base64: coverImage.base64, mimeType: coverImage.mimeType || 'image/jpeg' });
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            const confirmUpload = await waitFor(() => Array.from(
+              previewBox.querySelectorAll('.vicp-operate-btn'),
+            ).find((el) => isVisible(el) && (el.textContent || '').trim() === '确认上传') as HTMLElement | undefined || null, 15000);
+            confirmUpload.click();
+            await waitFor(() => {
+              const preview = previewBox.querySelector('img.preview') as HTMLImageElement | null;
+              const src = preview?.getAttribute('src');
+              return !isVisible(confirmUpload) && src && src !== oldPreview && preview?.complete && preview.naturalWidth > 0 ? true : null;
+            }, 30000);
+            coverStatus = { success: true };
+            console.log('[csdn] 封面上传完成，预览已确认');
+          } catch (coverError) {
+            console.warn('[csdn] 正文已填充，封面设置失败:', coverError);
+            coverStatus = { success: false, error: (coverError as any)?.message || String(coverError) };
+          }
+        }
+
         // 内容填充完成，不执行发布操作
         // 根据统一发布控制原则：最终发布必须由用户手动完成
         console.log('[csdn] 内容填充完成');
@@ -2089,6 +2100,7 @@ export const csdnAdapter: PlatformAdapter = {
           url: window.location.href,
           __synccasterNote: '内容已填充完成，请手动点击发布按钮完成发布',
           __csdnImageTimings: imageTimings,
+          __coverStatus: coverStatus,
         };
       } catch (error: any) {
         console.error('[csdn-fill] Error:', error);
