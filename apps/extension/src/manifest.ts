@@ -3,13 +3,17 @@
  */
 export function getManifest(mode: 'development' | 'production'): chrome.runtime.ManifestV3 {
   const isDev = mode === 'development';
+  // Release builds inject EXTENSION_VERSION from the Git tag. Keep a local
+  // fallback so development builds remain reproducible.
+  const version = process.env.EXTENSION_VERSION || '0.0.1';
 
   return {
     manifest_version: 3,
     name: isDev ? '[DEV] WenDispatch' : 'WenDispatch',
-    version: '0.0.1',
+    version,
+    ...(process.env.EXTENSION_VERSION_NAME ? { version_name: process.env.EXTENSION_VERSION_NAME } : {}),
     description: '中文博客多平台发布助手 - 一次编辑，便捷发布',
-    
+
     // 图标
     icons: {
       16: 'assets/icon-16.png',
@@ -94,24 +98,24 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
       // 微信公众号
       'https://mp.weixin.qq.com/*',
       'https://*.weixin.qq.com/*',
-      
+
       // 知乎
       'https://*.zhihu.com/*',
       'https://www.zhihu.com/*',
       'https://zhuanlan.zhihu.com/*',
-      
+
       // 掘金
       'https://*.juejin.cn/*',
       'https://juejin.cn/*',
       'https://api.juejin.cn/*',
-      
+
       // CSDN
       'https://*.csdn.net/*',
       'https://blog.csdn.net/*',
       'https://editor.csdn.net/*',
       'https://me.csdn.net/*',
       'https://passport.csdn.net/*',
-      
+
       // 博客园
       'https://*.cnblogs.com/*',
       'https://www.cnblogs.com/*',
