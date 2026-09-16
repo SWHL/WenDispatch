@@ -127,7 +127,8 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
     // Web 可访问资源
     web_accessible_resources: [
       {
-        resources: ['assets/*', 'md-editor/*', 'md-editor.html'],
+        // 编辑器入口为 md-editor/md-editor.html，由 md-editor/* 覆盖。
+        resources: ['assets/*', 'md-editor/*'],
         matches: ['<all_urls>'],
       },
     ],

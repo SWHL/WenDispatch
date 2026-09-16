@@ -81,6 +81,11 @@ pnpm dev
 
 构建完成后，在 Chrome 的“扩展程序”页面开启开发者模式，加载 `apps/extension/dist`。
 
+发布到 Chrome 网上应用店时，直接上传 GitHub Release 中的 `wendispatch-*.zip`。
+发布工作流会从 Git 标签（如 `v0.0.4`）注入扩展版本号，并将 `dist` 内的文件打包，确保 `manifest.json` 位于 ZIP 根目录。
+如果手动压缩，请进入 `apps/extension/dist` 后压缩其中的文件；不要压缩外层目录，否则清单会多嵌套一层。
+商店更新所用的版本号必须高于已上传版本；本地普通构建的默认版本仍为 `0.0.1`，手动发布前需通过 `EXTENSION_VERSION` 环境变量设置新版本。
+
 ## 迁移与路线图
 
 迁移边界和平台验证记录见 [`docs/WENDISPATCH_MIGRATION.md`](docs/WENDISPATCH_MIGRATION.md)。后续按以下顺序推进：
