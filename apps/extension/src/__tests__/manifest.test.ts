@@ -1,8 +1,35 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { getManifest } from '../manifest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import extensionManifest, { getManifest } from '../manifest';
 
 describe('extension manifest', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('keeps the production export aligned with the current build environment', () => {
+    expect(extensionManifest.version).toBe(getManifest('production').version);
+    expect(extensionManifest.version).toBe(process.env.EXTENSION_VERSION || '0.0.1');
+  });
+
+  it('uses the local fallback when no release version is provided', () => {
+    vi.stubEnv('EXTENSION_VERSION', '');
+    vi.stubEnv('EXTENSION_VERSION_NAME', '');
+
+    const manifest = getManifest('production');
+    expect(manifest.version).toBe('0.0.1');
+    expect(manifest.version_name).toBeUndefined();
+  });
+
+  it('uses the injected release version and display name', () => {
+    vi.stubEnv('EXTENSION_VERSION', '0.0.4');
+    vi.stubEnv('EXTENSION_VERSION_NAME', '0.0.4-beta.1');
+
+    const manifest = getManifest('production');
+    expect(manifest.version).toBe('0.0.4');
+    expect(manifest.version_name).toBe('0.0.4-beta.1');
+  });
+
   it('allows optional AI provider permissions for local HTTP hosts', () => {
     const manifest = getManifest('production');
 
