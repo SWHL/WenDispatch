@@ -20,7 +20,6 @@ import {
 } from './job-service';
 import { getReuseTabInfo, openOrReuseTab } from './inpage-runner';
 import { initNativeAgentBridge } from './native-agent-bridge';
-import { handleAiMessage, isAiMessageType } from './ai-service';
 import { sanitizeMessageForLog } from './message-log';
 
 const logger = new Logger('background');
@@ -229,10 +228,6 @@ async function saveCollectedPost(data: any) {
  * 处理消息
  */
 async function handleMessage(message: any, sender: chrome.runtime.MessageSender) {
-  if (isAiMessageType(message.type)) {
-    return await handleAiMessage(message);
-  }
-
   switch (message.type) {
     case 'CREATE_JOB':
       return await createManagedJob(message.data);

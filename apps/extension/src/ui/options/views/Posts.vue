@@ -104,16 +104,6 @@
           <div class="flex gap-2">
             <n-button
               size="small"
-              secondary
-              @click.stop="rewritePost(post)"
-            >
-              <AppIcon
-                name="ai"
-                class="mr-1"
-              />AI 改写
-            </n-button>
-            <n-button
-              size="small"
               type="primary"
               secondary
               @click.stop="editPost(post.id)"
@@ -152,7 +142,6 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { db } from '@wendispatch/core';
 import { useMessage } from 'naive-ui';
-import { getAiRewriteHash } from '../ai/post-routing';
 
 defineProps<{ isDark?: boolean }>();
 const message = useMessage();
@@ -208,7 +197,6 @@ function formatTime(ts: number) {
 
 function createPost() { window.location.hash = 'editor/new'; }
 function editPost(id: string) { window.location.hash = `editor/${id}`; }
-function rewritePost(post: any) { window.location.hash = getAiRewriteHash(post); }
 
 // 根据 source_url 判断文章来源平台
 function getSourcePlatform(post: any): string {

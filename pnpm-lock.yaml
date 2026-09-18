@@ -71,9 +71,6 @@ importers:
       '@wendispatch/agent-protocol':
         specifier: workspace:*
         version: link:../../packages/agent-protocol
-      '@wendispatch/ai':
-        specifier: workspace:*
-        version: link:../../packages/ai
       '@wendispatch/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -155,8 +152,6 @@ importers:
         version: link:../core
 
   packages/agent-protocol: {}
-
-  packages/ai: {}
 
   packages/core:
     dependencies:

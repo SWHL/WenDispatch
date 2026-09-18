@@ -10,9 +10,6 @@ export function resolveOptionsRoute(rawHash: string): OptionsRoute {
   if (!hash) {
     return { view: 'dashboard', navPath: 'dashboard' };
   }
-  if (hash.startsWith('ai-rewrite/')) {
-    return { view: 'ai-rewrite', navPath: '' };
-  }
   if (hash.startsWith('editor/')) {
     return { view: 'editor', navPath: 'editor' };
   }

@@ -17,7 +17,6 @@
     "baseUrl": ".",
     "paths": {
       "@wendispatch/core": ["./packages/core/src"],
-      "@wendispatch/ai": ["./packages/ai/src"],
       "@wendispatch/adapters": ["./packages/adapters/src"],
       "@wendispatch/agent-protocol": ["./packages/agent-protocol/src"],
       "@wendispatch/editor": ["./packages/editor/src"],

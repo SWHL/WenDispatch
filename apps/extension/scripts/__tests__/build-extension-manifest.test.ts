@@ -7,8 +7,10 @@ describe('build-extension-manifest', () => {
     const distManifest = createDistManifest(manifest as any);
 
     expect(distManifest.background.service_worker).toBe('background.js');
-    expect(distManifest.content_scripts[0].js).toEqual(['content-scripts.js']);
-    expect(distManifest.content_scripts[1].js).toEqual(['juejin-image-paste.js']);
+    const juejinContentScript = distManifest.content_scripts.find((contentScript: any) =>
+      contentScript.matches?.includes('https://juejin.cn/editor/drafts/*')
+    );
+    expect(juejinContentScript?.js).toEqual(['juejin-image-paste.js']);
 
     const allScriptPaths = [
       distManifest.background.service_worker,

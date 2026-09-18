@@ -2,11 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { sanitizeMessageForLog } from '../message-log';
 
 describe('sanitizeMessageForLog', () => {
-  it('redacts API keys from AI save config messages', () => {
+  it('redacts API keys from diagnostic messages', () => {
     const message = {
-      type: 'AI_SAVE_CONFIG',
+      type: 'SAVE_POST',
       data: {
-        baseUrl: 'https://api.openai.com/v1',
         apiKey: 'sk-secret',
         nested: {
           apiKey: 'sk-nested',
@@ -15,9 +14,8 @@ describe('sanitizeMessageForLog', () => {
     };
 
     expect(sanitizeMessageForLog(message)).toEqual({
-      type: 'AI_SAVE_CONFIG',
+      type: 'SAVE_POST',
       data: {
-        baseUrl: 'https://api.openai.com/v1',
         apiKey: '[REDACTED]',
         nested: {
           apiKey: '[REDACTED]',

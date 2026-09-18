@@ -83,12 +83,18 @@
             </button>
           </div>
         </div>
-        <input ref="coverInputRef" type="file" accept="image/*" style="display: none" @change="handleCoverUpload" />
+        <input
+          ref="coverInputRef"
+          type="file"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          style="display: none"
+          @change="handleCoverUpload"
+        />
         <div v-if="cover" class="cover-preview" @click="previewImage(cover)">
           <img :src="cover.blobUrl || cover.url" :alt="cover.alt || '文章封面'" />
           <span class="cover-preview-label">当前封面</span>
         </div>
-        <div v-else class="cover-empty">尚未设置封面</div>
+        <div v-else class="cover-empty">尚未设置封面（支持 JPEG、JPG、PNG）</div>
       </div>
 
       <!-- 通用编辑器主体：左右分栏 -->
@@ -265,8 +271,6 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useMessage } from 'naive-ui';
 import { db, type Account, ChromeStorageBridge, AccountStatus } from '@wendispatch/core';
 import { renderMarkdownPreview, processMermaidInContainer } from '../utils/markdown-preview';
-import { aiClient } from '../ai/client';
-import { getPostEditHash } from '../ai/post-routing';
 import { 
   hasImageInClipboard, 
   handleImagePaste, 
@@ -726,6 +730,19 @@ async function handleCoverUpload(event: Event) {
   input.value = '';
   if (!file) return;
 
+  // 知乎封面不支持 WebP 等格式；accept 只影响文件选择器，仍需在这里做运行时校验。
+  const fileExtension = file.name.toLowerCase().match(/\.([^.]+)$/)?.[1];
+  const allowedMimeTypes = ['image/jpeg', 'image/png'];
+  const allowedExtensions = ['jpg', 'jpeg', 'png'];
+  const fileType = file.type.toLowerCase();
+  const isSupportedCover = fileType
+    ? allowedMimeTypes.includes(fileType)
+    : allowedExtensions.includes(fileExtension || '');
+  if (!isSupportedCover) {
+    showValidationError('封面仅支持 JPEG、JPG、PNG 格式');
+    return;
+  }
+
   try {
     const { dataUrl, width, height } = await compressImage(file);
     const imageId = `cover-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1024,16 +1041,6 @@ function showValidationError(msg: string) {
   setTimeout(() => { showValidationTip.value = false; }, 1500);
 }
 
-async function getHashAfterCreate(post: any) {
-  try {
-    const response = await aiClient.getConfig();
-    return getPostEditHash(response.config, post);
-  } catch (error) {
-    console.warn('Failed to load AI config after creating post:', error);
-    return `editor/${post.id}`;
-  }
-}
-
 async function save(options: { routeAfterCreate?: boolean } = {}) {
   try {
     return await persistArticle(options);
@@ -1076,7 +1083,7 @@ async function persistArticle(options: { routeAfterCreate?: boolean } = {}) {
     savedBody.value = body.value;
     savedCoverUrl.value = String(cover.value?.url || '');
     if (routeAfterCreate) {
-      window.location.hash = await getHashAfterCreate(post);
+      window.location.hash = `editor/${post.id}`;
     } else {
       window.location.hash = `editor/${newId}`;
     }

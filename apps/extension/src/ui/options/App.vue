@@ -111,18 +111,6 @@
                   </button>
                 </n-dropdown>
 
-                <button
-                  class="w-8 h-8 rounded-md transition-colors flex items-center justify-center text-sm select-none border-none outline-none"
-                  :class="isDark
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  title="AI 服务设置"
-                  aria-label="AI 服务设置"
-                  @click="openAiServiceSettings"
-                >
-                  <AppIcon name="ai" />
-                </button>
-                
                 <!-- 主题切换 -->
                 <n-dropdown
                   :options="themeModeOptions"
@@ -194,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, shallowRef, h, provide, inject, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, shallowRef, h, provide, inject } from 'vue';
 import { darkTheme, useMessage } from 'naive-ui';
 import type { DropdownOption, GlobalThemeOverrides, MessageApiInjection } from 'naive-ui';
 import { db } from '@wendispatch/core';
@@ -203,30 +191,19 @@ import PostsView from './views/Posts.vue';
 import AccountsView from './views/Accounts.vue';
 import TasksView from './views/Tasks.vue';
 import EditorView from './views/Editor.vue';
-import AiSettingsView from './views/AiSettings.vue';
-import AiRewriteView from './views/AiRewrite.vue';
 import { resolveOptionsRoute } from './options-route';
 import AppIcon from '../components/AppIcon.vue';
+import { useExtensionTheme } from '../theme';
 
-type ThemeMode = 'light' | 'dark' | 'auto';
-// 与 Markdown 编辑器的 VueUse 主题状态共享，确保两个页面设置一致
-const THEME_MODE_STORAGE_KEY = 'vueuse-color-scheme';
-const savedThemeMode = localStorage.getItem(THEME_MODE_STORAGE_KEY) ?? localStorage.getItem('wendispatch-theme-mode');
-const themeMode = ref<ThemeMode>(savedThemeMode === 'light' || savedThemeMode === 'dark' || savedThemeMode === 'auto' ? savedThemeMode : 'auto');
-const systemIsDark = ref(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
-const isDark = computed(() => themeMode.value === 'auto' ? systemIsDark.value : themeMode.value === 'dark');
+const { themeMode, isDark, setThemeMode: updateThemeMode } = useExtensionTheme();
 const themeModeOptions = [
   { label: '浅色模式', key: 'light' },
   { label: '深色模式', key: 'dark' },
   { label: '跟随系统', key: 'auto' },
 ];
-const systemThemeMedia = window.matchMedia?.('(prefers-color-scheme: dark)');
-const handleSystemThemeChange = (event: MediaQueryListEvent) => { systemIsDark.value = event.matches; };
 function setThemeMode(mode: string) {
-  if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') return;
-  themeMode.value = mode;
+  if (mode === 'light' || mode === 'dark' || mode === 'auto') updateThemeMode(mode);
 }
-watch(themeMode, (mode) => localStorage.setItem(THEME_MODE_STORAGE_KEY, mode));
 const theme = computed(() => isDark.value ? darkTheme : null);
 const themeOverrides = computed<GlobalThemeOverrides>(() => ({
   common: isDark.value
@@ -321,8 +298,6 @@ const components: Record<string, any> = {
   posts: PostsView,
   accounts: AccountsView,
   tasks: TasksView,
-  'ai-settings': AiSettingsView,
-  'ai-rewrite': AiRewriteView,
   editor: EditorView,
 };
 
@@ -331,7 +306,6 @@ const currentComponent = shallowRef(DashboardView);
 onMounted(async () => {
   updateRouteFromHash();
   window.addEventListener('hashchange', updateRouteFromHash);
-  systemThemeMedia?.addEventListener?.('change', handleSystemThemeChange);
 
   // 插件打开时自动检测账号状态（后台执行，不阻塞 UI）
   autoRefreshAccountsOnStartup();
@@ -384,7 +358,6 @@ async function autoRefreshAccountsOnStartup() {
 
 onBeforeUnmount(() => {
   window.removeEventListener('hashchange', updateRouteFromHash);
-  systemThemeMedia?.removeEventListener?.('change', handleSystemThemeChange);
 });
 
 function navigate(path: string) {
@@ -404,21 +377,11 @@ function navigate(path: string) {
   window.location.hash = path;
 }
 
-function openAiServiceSettings() {
-  sessionStorage.removeItem('wendispatch-ai-settings-return');
-  navigate('ai-settings');
-}
-
 function updateRouteFromHash() {
   const raw = window.location.hash.slice(1);
   const route = resolveOptionsRoute(raw);
   if (!raw) {
     navigate('dashboard');
-    return;
-  }
-  if (route.view === 'ai-rewrite') {
-    currentPath.value = route.navPath;
-    currentComponent.value = components[route.view];
     return;
   }
   // 支持 editor/<id>

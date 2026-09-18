@@ -4,8 +4,7 @@ WenDispatch is an open-source Chrome extension for blog article writing and publ
 
 ## Data Collection
 
-WenDispatch **does NOT send any user data, article content or credentials to external servers**.
-All data processing occurs locally inside your browser.
+WenDispatch does not send data to a developer-operated server. Data processing occurs locally inside your browser. Article content and account information are sent only to the publishing platform selected by the user during a publishing operation.
 
 ## Local Data Stored
 
@@ -18,14 +17,14 @@ All of these data stay on your local browser, never uploaded to cloud.
 
 ## Permission usage
 
-- scripting / host permissions: Only run when user manually trigger publish operation, fill article content into target blog websites.
-- tabs / activeTab: Identify opened blog pages only under user manual operation.
-- clipboardRead / clipboardWrite: Help copy & paste article text inside editor.
+- scripting / host permissions: Run when the user manually triggers publishing or content collection on target websites.
+- tabs / activeTab: Identify and operate on tabs involved in a user-triggered collection or publishing task.
+- clipboardWrite: Copy article text and rich previews from the editor; pasted files are read from the user-initiated paste event.
 - cookies: Read login cookies of your target blog platforms only when you start publish task.
 
 ## Data Sharing
 
-We will never sell, share, transfer your data to any third party.
+We will never sell or transfer your data to a developer-operated third party. Publishing data is sent only to the platform selected by the user.
 
 ## Open Source
 

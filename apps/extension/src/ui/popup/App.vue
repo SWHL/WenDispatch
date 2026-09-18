@@ -1,5 +1,5 @@
 <template>
-  <div class="w-96 min-h-120 bg-[#f5f6f7] relative overflow-hidden">
+  <div class="w-96 min-h-120 relative overflow-hidden transition-colors duration-300" :class="isDark ? 'bg-[#202326] text-gray-100' : 'bg-[#f5f6f7] text-gray-800'">
     
     <div class="relative z-10 p-6">
       <!-- 头部 -->
@@ -7,12 +7,13 @@
         <div class="flex items-center gap-3 select-none">
           <img src="/assets/wendispatch-mark.svg" alt="WenDispatch" class="w-10 h-10 object-contain rounded-lg">
           <div>
-            <h1 class="text-xl font-semibold text-gray-800">WenDispatch</h1>
-            <p class="text-xs text-gray-500">内容采集与发布助手</p>
+          <h1 class="text-xl font-semibold" :class="isDark ? 'text-gray-100' : 'text-gray-800'">WenDispatch</h1>
+          <p class="text-xs" :class="isDark ? 'text-gray-400' : 'text-gray-500'">内容采集与发布助手</p>
           </div>
         </div>
         <button
-          class="w-9 h-9 rounded-lg bg-white shadow-sm hover:bg-gray-50 transition-colors text-gray-600 hover:text-gray-800 flex items-center justify-center border-none outline-none"
+          class="w-9 h-9 rounded-lg shadow-sm transition-colors flex items-center justify-center border-none outline-none"
+          :class="isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 hover:text-white' : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-800'"
           @click="openOptions"
           title="设置"
         >
@@ -33,24 +34,26 @@
       <template v-else>
         <!-- 快速操作 -->
         <div class="mb-5">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 select-none">快速操作</h2>
+          <h2 class="text-xs font-semibold uppercase tracking-wider mb-3 select-none" :class="isDark ? 'text-gray-400' : 'text-gray-500'">快速操作</h2>
           <div class="grid grid-cols-2 gap-3">
             <button
-              class="group relative bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 border-none select-none overflow-hidden"
+              class="group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 border-none select-none overflow-hidden"
+              :class="isDark ? 'bg-[#292d30]' : 'bg-white'"
               @click="collectFromCurrentPage"
             >
               <div class="relative flex flex-col items-center gap-2">
                 <AppIcon name="download" class="text-2xl" />
-                <span class="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">采集当前页</span>
+                <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-gray-200 group-hover:text-blue-300' : 'text-gray-700 group-hover:text-blue-600'">采集当前页</span>
               </div>
             </button>
             <button
-              class="group relative bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 border-none select-none overflow-hidden"
+              class="group relative rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 border-none select-none overflow-hidden"
+              :class="isDark ? 'bg-[#292d30]' : 'bg-white'"
               @click="openEditor"
             >
               <div class="relative flex flex-col items-center gap-2">
                 <AppIcon name="edit" class="text-2xl" />
-                <span class="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">新建文章</span>
+                <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-gray-200 group-hover:text-purple-300' : 'text-gray-700 group-hover:text-purple-600'">新建文章</span>
               </div>
             </button>
           </div>
@@ -58,8 +61,8 @@
 
         <!-- 草稿列表 -->
         <div class="mb-5">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 select-none">最近草稿</h2>
-          <div v-if="recentPosts.length === 0" class="bg-white rounded-lg p-8 text-center">
+          <h2 class="text-xs font-semibold uppercase tracking-wider mb-3 select-none" :class="isDark ? 'text-gray-400' : 'text-gray-500'">最近草稿</h2>
+          <div v-if="recentPosts.length === 0" class="rounded-lg p-8 text-center" :class="isDark ? 'bg-[#292d30]' : 'bg-white'">
             <AppIcon name="article" class="text-4xl mb-2 opacity-30" />
             <div class="text-sm text-gray-500 select-none">暂无草稿</div>
           </div>
@@ -67,7 +70,8 @@
             <div
               v-for="post in recentPosts"
               :key="post.id"
-              class="group bg-white rounded-lg p-4 shadow-sm hover:shadow-md cursor-pointer select-none transition-shadow duration-200 border-none"
+              class="group rounded-lg p-4 shadow-sm hover:shadow-md cursor-pointer select-none transition-shadow duration-200 border-none"
+              :class="isDark ? 'bg-[#292d30]' : 'bg-white'"
               @click="editPost(post.id)"
             >
               <div class="flex items-start gap-3">
@@ -75,10 +79,10 @@
                   <AppIcon name="file" class="text-lg" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                  <div class="text-sm font-medium truncate group-hover:text-blue-600 transition-colors" :class="isDark ? 'text-gray-100' : 'text-gray-800'">
                     {{ post.title }}
                   </div>
-                  <div class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                  <div class="text-xs mt-1 flex items-center gap-1" :class="isDark ? 'text-gray-400' : 'text-gray-500'">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -92,18 +96,19 @@
 
         <!-- 任务状态 -->
         <div v-if="runningJobs.length > 0">
-          <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 select-none">进行中的任务</h2>
+          <h2 class="text-xs font-semibold uppercase tracking-wider mb-3 select-none" :class="isDark ? 'text-gray-400' : 'text-gray-500'">进行中的任务</h2>
           <div class="space-y-2">
             <div
               v-for="job in runningJobs"
               :key="job.id"
-              class="bg-white rounded-lg p-4 shadow-sm border-none select-none"
+              class="rounded-lg p-4 shadow-sm border-none select-none"
+              :class="isDark ? 'bg-[#292d30]' : 'bg-white'"
             >
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <div class="text-sm text-gray-800 font-medium">发布中...</div>
+                <div class="text-sm font-medium" :class="isDark ? 'text-gray-100' : 'text-gray-800'">发布中...</div>
               </div>
-              <div class="bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div class="rounded-full h-2 overflow-hidden" :class="isDark ? 'bg-gray-700' : 'bg-gray-100'">
                 <div
                   class="bg-[#2e9b68] h-2 rounded-full transition-all duration-500"
                   :style="{ width: `${job.progress}%` }"
@@ -146,8 +151,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { db } from '@wendispatch/core';
-import { aiClient } from '../options/ai/client';
-import { getPostEditUrl } from '../options/ai/post-routing';
+import { useExtensionTheme } from '../theme';
+
+const { isDark } = useExtensionTheme();
 
 const loading = ref(true);
 const recentPosts = ref<any[]>([]);
@@ -261,16 +267,6 @@ async function editPost(postId: string) {
   if (!post) {
     showToast('文章不存在', 'error');
     return;
-  }
-
-  try {
-    const response = await aiClient.getConfig();
-    chrome.tabs.create({
-      url: getPostEditUrl(response.config, post, chrome.runtime.getURL),
-    });
-    return;
-  } catch (error) {
-    console.warn('Failed to load AI config, opening editor directly:', error);
   }
 
   chrome.tabs.create({

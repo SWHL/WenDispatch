@@ -51,14 +51,9 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
 
     // 内容脚本
     content_scripts: [
-      {
-        matches: [
-          'https://*/*',
-          'http://*/*'
-        ],
-        js: ['src/content-scripts/index.ts'],
-        run_at: 'document_idle',
-      },
+      // The generic collector is injected only after the user invokes the
+      // extension action. This keeps arbitrary pages out of install-time
+      // host access while activeTab covers that explicit user action.
       {
         matches: ['https://juejin.cn/editor/drafts/*'],
         js: ['src/content-scripts/juejin-image-paste.ts'],
@@ -75,29 +70,16 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
       'alarms',
       'notifications',
       'sidePanel',
-      'downloads',
       'activeTab',
       'nativeMessaging',
       'cookies',  // 读取 Cookie 以检测登录状态
-      'clipboardRead',
       'clipboardWrite',
-    ],
-
-    optional_host_permissions: [
-      'https://*/*',
-      'http://*/*',
-      'http://localhost/*',
-      'http://127.0.0.1/*',
     ],
 
     // 第一阶段发布平台的常驻主机权限
     host_permissions: [
-      // favicon（用于账号管理页的平台图标显示）
-      'https://www.google.com/s2/favicons*',
-
       // 微信公众号
       'https://mp.weixin.qq.com/*',
-      'https://*.weixin.qq.com/*',
 
       // 知乎
       'https://*.zhihu.com/*',
