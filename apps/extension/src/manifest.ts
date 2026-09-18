@@ -106,6 +106,10 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
       'https://passport.cnblogs.com/*',
     ],
 
+    // AI providers may run on arbitrary HTTPS or local HTTP origins. Keep
+    // these permissions optional so they are requested only when needed.
+    optional_host_permissions: ['https://*/*', 'http://*/*'],
+
     // Web 可访问资源
     web_accessible_resources: [
       {
