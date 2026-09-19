@@ -5,9 +5,7 @@ import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { highlightPendingBlocks, hljs, renderPendingMath } from '@md/core'
 import { markdownSetup, theme } from '@md/shared/editor'
-import imageCompression from 'browser-image-compression'
 import { Eye, Pen } from 'lucide-vue-next'
-import { SidebarAIToolbar } from '@/components/ai'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -126,7 +124,6 @@ function toggleView() {
   showEditor.value = !showEditor.value
 }
 
-// AI 工具箱已移到侧边栏
 
 const previewRef = useTemplateRef<HTMLDivElement>(`previewRef`)
 
@@ -137,7 +134,6 @@ const themeCompartment = new Compartment()
 // 使浏览区与编辑区滚动条建立同步联系
 function leftAndRightScroll() {
   const scrollCB = (text: string) => {
-    // AIPolishBtnRef.value?.close()
 
     let source: HTMLElement | null
     let target: HTMLElement | null
@@ -341,18 +337,32 @@ function uploaded(imageUrl: string) {
   if (codeMirrorView.value) {
     codeMirrorView.value.dispatch(codeMirrorView.value.state.replaceSelection(`\n${markdownImage}\n`))
   }
-  toast.success(`图片上传成功`)
+  toast.success(`图片已插入`)
 }
 
 const isImgLoading = ref(false)
 async function compressImage(file: File) {
-  const options = {
-    maxSizeMB: 1,
-    maxWidthOrHeight: 1920,
-    useWebWorker: true,
+  // Keep animation and vector formats intact; compression stays in the browser.
+  if (![`image/jpeg`, `image/png`].includes(file.type))
+    return file
+  const bitmap = await createImageBitmap(file)
+  try {
+    const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement(`canvas`)
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext(`2d`)
+    if (!context)
+      return file
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, file.type, 0.85))
+    return blob && blob.size < file.size
+      ? new File([blob], file.name, { type: blob.type, lastModified: file.lastModified })
+      : file
   }
-  const compressedFile = await imageCompression(file, options)
-  return compressedFile
+  finally {
+    bitmap.close()
+  }
 }
 async function uploadImage(
   file: File,
@@ -611,7 +621,6 @@ onMounted(() => {
     const editorView = createFormTextArea(editorDom)
     editor.value = editorView
 
-    // AI 工具箱已移到侧边栏，不再需要初始化编辑器事件
     editorRefresh()
     mdLocalToRemote()
   })
@@ -737,11 +746,6 @@ onUnmounted(() => {
               }"
             >
               <SearchTab v-if="codeMirrorView" ref="searchTabRef" :editor-view="codeMirrorView as any" />
-              <SidebarAIToolbar
-                :is-mobile="isMobile"
-                :show-editor="showEditor"
-              />
-
               <EditorContextMenu>
                 <div
                   id="editor"
@@ -811,7 +815,6 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- AI工具箱已移到侧边栏，这里不再显示 -->
 
       <UploadImgDialog @upload-image="uploadImage" />
 

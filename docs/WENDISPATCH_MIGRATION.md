@@ -6,7 +6,7 @@
 - 根项目名称和扩展 Manifest 已切换为 WenDispatch。
 - 第一阶段默认平台为 CSDN、稀土掘金、知乎、微信公众号、博客园。
 - 第一阶段之外的平台适配器、权限、认证规则和 UI 入口已移除。
-- Native Messaging 主机名为 `org.wendispatch.bridge`；重新安装扩展后需要重新运行安装脚本。
+- 扩展不使用 Native Messaging，也不连接本机辅助程序。
 
 ## 统一发布契约
 

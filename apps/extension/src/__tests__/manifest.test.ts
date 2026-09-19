@@ -30,13 +30,8 @@ describe('extension manifest', () => {
     expect(manifest.version_name).toBe('0.0.4-beta.1');
   });
 
-  it('allows optional AI provider permissions for local HTTP hosts', () => {
-    const manifest = getManifest('production');
-
-    expect(manifest.optional_host_permissions).toEqual(expect.arrayContaining([
-      'https://*/*',
-      'http://*/*',
-    ]));
+  it('does not request arbitrary optional host access', () => {
+    expect(getManifest('production').optional_host_permissions).toBeUndefined();
   });
 
   it('keeps persistent host access scoped to first-phase publish platforms', () => {

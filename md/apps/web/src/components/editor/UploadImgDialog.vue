@@ -259,10 +259,7 @@ async function cloudinarySubmit(formValues: any) {
 }
 
 const options = [
-  {
-    value: `default`,
-    label: `默认`,
-  },
+  { value: `default`, label: `本地保存（发布时上传）` },
   {
     value: `github`,
     label: `GitHub`,
@@ -301,10 +298,6 @@ const options = [
     label: `Cloudinary`,
   },
 
-  {
-    value: `formCustom`,
-    label: `自定义代码`,
-  },
 ]
 
 const imgHost = store.reactive(`imgHost`, `default`)
@@ -330,7 +323,7 @@ async function beforeImageUpload(file: File) {
   const imgHostValue = imgHost.value || `default`
 
   const config = await store.get(`${imgHostValue}Config`)
-  const isValidHost = imgHostValue === `default` || config
+  const isValidHost = imgHostValue === `default` || !!config
   if (!isValidHost) {
     toast.error(`请先配置 ${imgHostValue} 图床参数`)
     return false
@@ -401,7 +394,7 @@ function emitUploads(file: File) {
   <Dialog v-model:open="uiStore.isShowUploadImgDialog">
     <DialogContent class="md:max-w-max max-h-[90vh] overflow-y-auto" @pointer-down-outside="ev => ev.preventDefault()">
       <DialogHeader>
-        <DialogTitle>本地上传</DialogTitle>
+        <DialogTitle>插入图片</DialogTitle>
       </DialogHeader>
       <Tabs v-model="activeName" class="w-full md:w-max">
         <TabsList class="grid w-full overflow-x-auto grid-cols-3 md:grid-cols-none md:flex md:flex-wrap gap-1">
@@ -439,9 +432,10 @@ function emitUploads(file: File) {
               </SelectContent>
             </Select>
           </Label>
+          <p class="mt-3 text-sm text-muted-foreground">本地保存不会发送图片。选择并配置图床后，插入的图片会上传到该服务，其可见性由你的图床设置决定。</p>
           <Label label="UseCompression">
             <span class="my-4 block">
-              开启图片压缩
+              开启本地图片压缩（JPEG / PNG）
             </span>
             <Switch
               v-model:checked="useCompression"
@@ -1159,9 +1153,6 @@ function emitUploads(file: File) {
           </Form>
         </TabsContent>
 
-        <TabsContent value="formCustom" class="grid">
-          <CustomUploadForm />
-        </TabsContent>
       </Tabs>
     </DialogContent>
   </Dialog>

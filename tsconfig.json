@@ -18,7 +18,6 @@
     "paths": {
       "@wendispatch/core": ["./packages/core/src"],
       "@wendispatch/adapters": ["./packages/adapters/src"],
-      "@wendispatch/agent-protocol": ["./packages/agent-protocol/src"],
       "@wendispatch/editor": ["./packages/editor/src"],
       "@wendispatch/utils": ["./packages/utils/src"]
     }

@@ -45,12 +45,6 @@ importers:
         specifier: ^1.1.0
         version: 1.6.1(@types/node@20.19.43)
 
-  apps/agent-bridge:
-    dependencies:
-      '@wendispatch/agent-protocol':
-        specifier: workspace:*
-        version: link:../../packages/agent-protocol
-
   apps/extension:
     dependencies:
       '@fortawesome/fontawesome-svg-core':
@@ -68,9 +62,6 @@ importers:
       '@wendispatch/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
-      '@wendispatch/agent-protocol':
-        specifier: workspace:*
-        version: link:../../packages/agent-protocol
       '@wendispatch/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -150,8 +141,6 @@ importers:
       '@wendispatch/core':
         specifier: workspace:*
         version: link:../core
-
-  packages/agent-protocol: {}
 
   packages/core:
     dependencies:

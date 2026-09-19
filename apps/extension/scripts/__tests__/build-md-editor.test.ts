@@ -90,6 +90,20 @@ describe('MD Editor Build Output Completeness', () => {
       }
     });
 
+    it('should not package remotely hosted executable scripts in either HTML entrypoint', () => {
+      for (const filename of ['md-editor.html', 'index.html']) {
+        const htmlPath = resolve(MD_EDITOR_OUTPUT_DIR, filename);
+        if (!existsSync(htmlPath)) {
+          console.log(`${filename} not found. Run \`pnpm build:md-editor\` first.`);
+          return;
+        }
+
+        const htmlContent = readFileSync(htmlPath, 'utf-8');
+        expect(htmlContent).not.toMatch(/<script[^>]+src=["'](?:https?:)?\/\//i);
+        expect(htmlContent).not.toMatch(/<script\b(?![^>]*\bsrc=)[^>]*>/i);
+      }
+    });
+
     it('should have JavaScript files in static/js directory', () => {
       // Skip if build hasn't been run yet
       const jsDir = resolve(MD_EDITOR_OUTPUT_DIR, 'static/js');

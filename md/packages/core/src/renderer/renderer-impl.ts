@@ -1,11 +1,11 @@
 import type { IOpts, RendererAPI } from '@md/shared/types'
 import type { RendererObject, Tokens } from 'marked'
 import type { ReadTimeResults } from 'reading-time'
-import frontMatter from 'front-matter'
 import hljs from 'highlight.js/lib/core'
 import { marked } from 'marked'
 import readingTime from 'reading-time'
-import { markedAlert, markedFootnotes, markedMarkup, markedPlantUML, markedRuby, markedSlider, markedToc, MDKatex } from '../extensions'
+import { parse as parseYaml } from 'yaml'
+import { markedAlert, markedFootnotes, markedMarkup, markedRuby, markedSlider, markedToc, MDKatex } from '../extensions'
 import { COMMON_LANGUAGES, highlightAndFormatCode } from '../utils/languages'
 
 Object.entries(COMMON_LANGUAGES).forEach(([name, lang]) => {
@@ -87,9 +87,12 @@ interface ParseResult {
 
 function parseFrontMatterAndContent(markdownText: string): ParseResult {
   try {
-    const parsed = frontMatter(markdownText)
-    const yamlData = parsed.attributes
-    const markdownContent = parsed.body
+    const match = markdownText.match(/^\uFEFF?(?:---|= yaml =)\s*\n([\s\S]*?)\n(?:---|\.\.\.)\s*(?:\n|$)/)
+    const yamlData: Record<string, any> = {}
+    const markdownContent = match ? markdownText.slice(match[0].length) : markdownText
+    if (match) {
+      Object.assign(yamlData, parseYaml(match[1]) || {})
+    }
 
     const readingTimeResult = readingTime(markdownContent)
 
@@ -373,9 +376,6 @@ export function initRenderer(opts: IOpts = {}): RendererAPI {
   marked.use(markedAlert({}))
   marked.use(MDKatex({ nonStandard: true }, true))
   marked.use(markedFootnotes())
-  marked.use(markedPlantUML({
-    inlineSvg: true, // 启用SVG内嵌，适用于微信公众号
-  }))
   marked.use(markedRuby())
 
   return {

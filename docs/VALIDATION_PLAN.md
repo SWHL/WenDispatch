@@ -17,7 +17,6 @@
 pnpm test --run packages/core/src/platforms/__tests__/first-phase.test.ts \
   packages/adapters/src/__tests__/first-phase-registry.test.ts \
   apps/extension/src/__tests__/manifest.test.ts
-pnpm --filter @wendispatch/agent-bridge build
 pnpm --filter @wendispatch/extension build:fast
 pnpm test --run
 git diff --check
@@ -106,4 +105,3 @@ git diff --check
 - 图片、公式和 Mermaid 要么通过，要么有已记录且用户可理解的降级。
 - 失败不误报成功，重试不会重复发布已成功目标。
 - 每个失败项都有复现步骤、日志和后续 issue。
-

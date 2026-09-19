@@ -16,8 +16,6 @@
     "@fortawesome/vue-fontawesome": "^3.3.3",
     "@mozilla/readability": "^0.5.0",
     "@wendispatch/adapters": "workspace:*",
-    "@wendispatch/agent-protocol": "workspace:*",
-    "@wendispatch/ai": "workspace:*",
     "@wendispatch/core": "workspace:*",
     "@wendispatch/utils": "workspace:*",
     "highlight.js": "^11.11.1",

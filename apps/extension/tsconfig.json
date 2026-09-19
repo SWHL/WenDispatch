@@ -7,7 +7,6 @@
       "@/*": ["src/*"],
       "@wendispatch/core": ["../../packages/core/src"],
       "@wendispatch/adapters": ["../../packages/adapters/src"],
-      "@wendispatch/agent-protocol": ["../../packages/agent-protocol/src"],
       "@wendispatch/utils": ["../../packages/utils/src"]
     }
   },

@@ -1,5 +1,4 @@
 import path from 'node:path'
-import process from 'node:process'
 
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
@@ -20,7 +19,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
  */
 export default defineConfig({
   base: './',
-  define: { process },
+  define: { 'process.env': {}, 'process.platform': JSON.stringify('browser') },
   envPrefix: ['VITE_', 'CF_'],
   plugins: [
     vue(),

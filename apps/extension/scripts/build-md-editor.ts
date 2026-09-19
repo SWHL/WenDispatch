@@ -8,7 +8,7 @@
  */
 
 import { execSync } from 'node:child_process'
-import { existsSync, renameSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -41,7 +41,9 @@ async function buildMdEditor(): Promise<void> {
     throw new Error('Build output directory not found')
   }
 
-  // Step 3: Rename index.html to md-editor.html and make CSP-compliant
+  // Step 3: Rename index.html to md-editor.html and make both HTML entrypoints
+  // CSP-compliant. The compatibility index.html is still packaged, so it must
+  // receive the same sanitization as the entrypoint used by the extension.
   console.log('\nStep 2: Renaming index.html to md-editor.html...')
   const indexPath = resolve(OUTPUT_DIR, 'index.html')
   const mdEditorPath = resolve(OUTPUT_DIR, 'md-editor.html')
@@ -49,6 +51,10 @@ async function buildMdEditor(): Promise<void> {
   if (existsSync(indexPath)) {
     // Read the HTML content
     let htmlContent = readFileSync(indexPath, 'utf-8')
+
+    // Do not ship upstream remote image URLs in extension HTML metadata.
+    htmlContent = htmlContent.replace(/\s*<link rel="shortcut icon"[^>]*>/g, '')
+    htmlContent = htmlContent.replace(/\s*<link\s+rel="apple-touch-icon-precomposed"[\s\S]*?>/g, '')
     
     // Remove inline scripts (CSP violation in Chrome extensions)
     // Remove the theme detection inline script
@@ -88,11 +94,15 @@ async function buildMdEditor(): Promise<void> {
       '<!-- Article-sync not needed in extension -->'
     )
     
-    // Write to md-editor.html
+    // Write both HTML entrypoints. Leaving the original index.html untouched
+    // would package the upstream CDN scripts and make the submission fail MV3
+    // remote-code review even though the extension opens md-editor.html.
     writeFileSync(mdEditorPath, htmlContent)
+    writeFileSync(indexPath, htmlContent)
     
     // Keep index.html as well for compatibility
     console.log(`   Created ${mdEditorPath}`)
+    console.log(`   Sanitized ${indexPath}`)
     console.log(`   Removed inline scripts for CSP compliance`)
     console.log(`   Removed external CDN scripts for CSP compliance`)
   } else {

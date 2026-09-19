@@ -71,7 +71,6 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
       'notifications',
       'sidePanel',
       'activeTab',
-      'nativeMessaging',
       'cookies',  // 读取 Cookie 以检测登录状态
       'clipboardWrite',
     ],
@@ -104,19 +103,6 @@ export function getManifest(mode: 'development' | 'production'): chrome.runtime.
       'https://i.cnblogs.com/*',
       'https://account.cnblogs.com/*',
       'https://passport.cnblogs.com/*',
-    ],
-
-    // AI providers may run on arbitrary HTTPS or local HTTP origins. Keep
-    // these permissions optional so they are requested only when needed.
-    optional_host_permissions: ['https://*/*', 'http://*/*'],
-
-    // Web 可访问资源
-    web_accessible_resources: [
-      {
-        // 编辑器入口为 md-editor/md-editor.html，由 md-editor/* 覆盖。
-        resources: ['assets/*', 'md-editor/*'],
-        matches: ['<all_urls>'],
-      },
     ],
 
     // 内容安全策略

@@ -1,11 +1,8 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { giteeConfig, githubConfig } from '@md/shared/configs'
 
 import fetch from '@md/shared/utils/fetch'
-import * as tokenTools from '@md/shared/utils/tokenTools'
 import { base64encode, safe64, utf16to8 } from '@md/shared/utils/tokenTools'
-import Buffer from 'buffer-from'
 import COS from 'cos-js-sdk-v5'
 import CryptoJS from 'crypto-js'
 import * as qiniu from 'qiniu-js'
@@ -13,25 +10,12 @@ import OSS from 'tiny-oss'
 import { v4 as uuidv4 } from 'uuid'
 import { store } from './storage'
 
-async function getConfig(useDefault: boolean, platform: string) {
-  if (useDefault) {
-    // load default config file
-    const config = platform === `github` ? githubConfig : giteeConfig
-    const { username, repoList, branch, accessTokenList } = config
-
-    // choose random token from access_token list
-    const tokenIndex = Math.floor(Math.random() * accessTokenList.length)
-    const accessToken = accessTokenList[tokenIndex].replace(`doocsmd`, ``)
-
-    // choose random repo from repo list
-    const repoIndex = Math.floor(Math.random() * repoList.length)
-    const repo = repoList[repoIndex]
-
-    return { username, repo, branch, accessToken }
-  }
-
+async function getConfig(platform: string) {
   // load configuration from storage
   const customConfig = await store.getJSON<any>(`${platform}Config`, {}) || {}
+
+  if (!customConfig.repo || !customConfig.accessToken)
+    throw new Error(`请先配置 ${platform} 图床参数`)
 
   // split username/repo
   const repoUrl = customConfig.repo
@@ -76,11 +60,7 @@ function getDateFilename(filename: string) {
 // -----------------------------------------------------------------------
 
 async function ghFileUpload(content: string, filename: string) {
-  const useDefault = await store.get(`imgHost`) === `default`
-  const { username, repo, branch, accessToken } = await getConfig(
-    useDefault,
-    `github`,
-  )
+  const { username, repo, branch, accessToken } = await getConfig(`github`)
   const dir = getDir()
   const url = `https://api.github.com/repos/${username}/${repo}/contents/${dir}/`
   const dateFilename = getDateFilename(filename)
@@ -107,12 +87,8 @@ async function ghFileUpload(content: string, filename: string) {
       message: `Upload by ${window.location.href}`,
     },
   })
-  const githubResourceUrl = `raw.githubusercontent.com/${username}/${repo}/${branch}/`
-  const cdnResourceUrl = `fastly.jsdelivr.net/gh/${username}/${repo}@${branch}/`
   res.content = res.data?.content || res.content
-  return useDefault
-    ? res.content.download_url.replace(githubResourceUrl, cdnResourceUrl)
-    : res.content.download_url
+  return res.content.download_url
 }
 
 // -----------------------------------------------------------------------
@@ -120,8 +96,7 @@ async function ghFileUpload(content: string, filename: string) {
 // -----------------------------------------------------------------------
 
 async function giteeUpload(content: any, filename: string) {
-  const useDefault = await store.get(`imgHost`) === `default`
-  const { username, repo, branch, accessToken } = await getConfig(useDefault, `gitee`)
+  const { username, repo, branch, accessToken } = await getConfig(`gitee`)
   const dir = getDir()
   const dateFilename = getDateFilename(filename)
   const url = `https://gitee.com/api/v5/repos/${username}/${repo}/contents/${dir}/${dateFilename}`
@@ -563,44 +538,6 @@ async function cloudinaryUpload(file: File): Promise<string> {
   return originUrl
 }
 
-// -----------------------------------------------------------------------
-// formCustom File Upload
-// -----------------------------------------------------------------------
-
-async function formCustomUpload(content: string, file: File) {
-  const customConfig = await store.get(`formCustomConfig`)
-  const str = `
-    async (CUSTOM_ARG) => {
-      ${customConfig}
-    }
-  `
-  return new Promise<string>((resolve, reject) => {
-    const exportObj = {
-      content, // 待上传图片的 base64
-      file, // 待上传图片的 file 对象
-      util: {
-        axios: fetch, // axios 实例
-        CryptoJS, // 加密库
-        OSS, // tiny-oss
-        COS, // cos-js-sdk-v5
-        Buffer, // buffer-from
-        uuidv4, // uuid
-        qiniu, // qiniu-js
-        tokenTools, // 一些编码转换函数
-        getDir, // 获取 年/月/日 形式的目录
-        getDateFilename, // 根据文件名获取它以 时间戳+uuid 的形式
-      },
-      okCb: resolve, // 重要: 上传成功后给此回调传 url 即可
-      errCb: reject, // 上传失败调用的函数
-    }
-    // eslint-disable-next-line no-eval
-    eval(str)(exportObj).catch((err: any) => {
-      console.error(err)
-      reject(err)
-    })
-  })
-}
-
 export async function fileUpload(content: string, file: File) {
   const imgHost = await store.get(`imgHost`)
   if (!imgHost) {
@@ -629,12 +566,11 @@ export async function fileUpload(content: string, file: File) {
       return telegramUpload(file)
     case `cloudinary`:
       return cloudinaryUpload(file)
-    case `formCustom`:
-      return formCustomUpload(content, file)
+    case `default`:
+    case `local`:
+    case null:
+      return `data:${file.type || 'image/png'};base64,${content}`
     default:
-      // return file.size / 1024 < 1024
-      //     ? giteeUpload(content, file.name)
-      //     : ghFileUpload(content, file.name);
-      return ghFileUpload(content, file.name)
+      throw new Error(`不支持的图片存储方式，请选择本地保存或配置图床`)
   }
 }

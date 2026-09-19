@@ -66,7 +66,6 @@ function getAllStoreStates() {
     isEditOnLeft: uiStore.isEditOnLeft,
     isOpenRightSlider: uiStore.isOpenRightSlider,
     isOpenPostSlider: uiStore.isOpenPostSlider,
-    showAIToolbox: uiStore.showAIToolbox,
 
     // Theme store 的状态
     theme: themeStore.theme,
@@ -99,8 +98,6 @@ function getAllStoreStates() {
     isShowInsertFormDialog: uiStore.isShowInsertFormDialog,
     isShowUploadImgDialog: uiStore.isShowUploadImgDialog,
     isShowInsertMpCardDialog: uiStore.isShowInsertMpCardDialog,
-    aiDialogVisible: uiStore.aiDialogVisible,
-    aiImageDialogVisible: uiStore.aiImageDialogVisible,
   }
 }
 
@@ -261,8 +258,6 @@ function applyImportedConfig() {
         uiStore.isOpenRightSlider = value
       else if (key === `isOpenPostSlider`)
         uiStore.isOpenPostSlider = value
-      else if (key === `showAIToolbox`)
-        uiStore.showAIToolbox = value
 
       // Theme store 的状态
       else if (key === `theme`)
@@ -317,10 +312,6 @@ function applyImportedConfig() {
         uiStore.isShowUploadImgDialog = value
       else if (key === `isShowInsertMpCardDialog`)
         uiStore.isShowInsertMpCardDialog = value
-      else if (key === `aiDialogVisible`)
-        uiStore.aiDialogVisible = value
-      else if (key === `aiImageDialogVisible`)
-        uiStore.aiImageDialogVisible = value
     }
   })
 

@@ -68,7 +68,6 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
       '@wendispatch/core': resolve(__dirname, '../../packages/core/src'),
       '@wendispatch/adapters': resolve(__dirname, '../../packages/adapters/src'),
-      '@wendispatch/agent-protocol': resolve(__dirname, '../../packages/agent-protocol/src'),
       '@wendispatch/utils': resolve(__dirname, '../../packages/utils/src'),
     },
   },

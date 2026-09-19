@@ -508,7 +508,6 @@ async function handlePublishToWechat() {
 
   <!-- 对话框组件，嵌套菜单无法正常挂载，需要提取层级 -->
   <EditorStateDialog :visible="editorStateDialogVisible" @close="editorStateDialogVisible = false" />
-  <AIImageGeneratorPanel v-model:open="uiStore.aiImageDialogVisible" />
 </template>
 
 <style lang="less" scoped>

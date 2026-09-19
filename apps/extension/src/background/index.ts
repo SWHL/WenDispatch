@@ -19,7 +19,6 @@ import {
   startJob as startManagedJob,
 } from './job-service';
 import { getReuseTabInfo, openOrReuseTab } from './inpage-runner';
-import { initNativeAgentBridge } from './native-agent-bridge';
 import { sanitizeMessageForLog } from './message-log';
 
 const logger = new Logger('background');
@@ -39,7 +38,6 @@ try {
 
 // 初始化账号服务（监听登录成功消息）
 AccountService.init();
-initNativeAgentBridge();
 
 // 监听扩展安装
 chrome.runtime.onInstalled.addListener(async (details) => {

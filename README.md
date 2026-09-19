@@ -19,7 +19,7 @@ WenDispatch 是一个本地运行的 Chrome 扩展，统一采集、编辑、预
 代码来源和使用范围：
 
 - [Wechatsync](https://github.com/wechatsync/Wechatsync)：平台发布适配器及浏览器端自动化流程，包括 CSDN、知乎、微信公众号、博客园和稀土掘金等平台的内容填充、图片处理和草稿操作。相关代码位于 `packages/adapters/`。
-- [SyncCaster](https://github.com/RyanYipeng/SyncCaster)：项目基础架构和扩展运行链路，包括扩展、Agent/MCP 桥接、协议及任务调度等部分；相关代码位于 `apps/`、`packages/agent-protocol/` 和 `apps/agent-bridge/`。
+- [SyncCaster](https://github.com/RyanYipeng/SyncCaster)：项目基础架构和扩展运行链路，包括扩展及任务调度等部分；相关代码位于 `apps/` 和 `packages/`。
 - [Markdown 中文网微信 Markdown 编辑器](https://markdown.com.cn/wechat/)：内嵌编辑器的微信排版主题和基础样式。相关资源位于 `md/packages/shared/src/configs/theme-css/markdown-cn/`，并在集成时保留来源注释。
 
 ## 第一阶段平台
@@ -54,10 +54,8 @@ WenDispatch 是一个本地运行的 Chrome 扩展，统一采集、编辑、预
 
 ```text
 apps/extension/       Chrome 扩展 UI、内容脚本和后台任务
-apps/agent-bridge/    本地 Agent/MCP 桥接
 packages/core/        CanonicalPost、资源管线、平台能力配置
 packages/adapters/    平台适配器和统一发布接口
-packages/ai/          可选的 AI 改写能力
 packages/utils/       日志等共享工具
 md/                   内嵌 Markdown 编辑器子项目
 docs/                 架构、发布流程和迁移说明
