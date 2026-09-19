@@ -319,6 +319,9 @@ importers:
       reading-time:
         specifier: ^1.5.0
         version: 1.5.0
+      yaml:
+        specifier: ^2.4.2
+        version: 2.9.0
     devDependencies:
       '@md/config':
         specifier: workspace:*
