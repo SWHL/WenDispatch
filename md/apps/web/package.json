@@ -46,7 +46,6 @@
     "cos-js-sdk-v5": "^1.10.1",
     "crypto-js": "^4.2.0",
     "es-toolkit": "^1.42.0",
-    "front-matter": "^4.0.2",
     "highlight.js": "^11.11.1",
     "html-to-image": "^1.11.13",
     "isomorphic-dompurify": "^2.33.0",
