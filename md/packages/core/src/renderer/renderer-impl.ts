@@ -87,7 +87,7 @@ interface ParseResult {
 
 function parseFrontMatterAndContent(markdownText: string): ParseResult {
   try {
-    const match = markdownText.match(/^\uFEFF?(?:---|= yaml =)\s*\n([\s\S]*?)\n(?:---|\.\.\.)\s*(?:\n|$)/)
+    const match = markdownText.match(/^\uFEFF?(?:---|= yaml =)[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/)
     const yamlData: Record<string, any> = {}
     const markdownContent = match ? markdownText.slice(match[0].length) : markdownText
     if (match) {

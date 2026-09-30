@@ -56,23 +56,11 @@ async function buildMdEditor(): Promise<void> {
     htmlContent = htmlContent.replace(/\s*<link rel="shortcut icon"[^>]*>/g, '')
     htmlContent = htmlContent.replace(/\s*<link\s+rel="apple-touch-icon-precomposed"[\s\S]*?>/g, '')
     
-    // Remove inline scripts (CSP violation in Chrome extensions)
-    // Remove the theme detection inline script
+    // Remove all inline scripts (CSP violation in Chrome extensions). Keep
+    // only scripts with a src attribute, which are bundled local assets.
     htmlContent = htmlContent.replace(
-      /<script>\s*const theme = localStorage\.getItem[\s\S]*?<\/script>/g,
-      '<!-- Theme detection moved to main bundle -->'
-    )
-    
-    // Remove the MathJax config inline script
-    htmlContent = htmlContent.replace(
-      /<script>\s*window\.MathJax[\s\S]*?<\/script>/g,
-      '<!-- MathJax config moved to main bundle -->'
-    )
-    
-    // Remove the timeout tip inline script
-    htmlContent = htmlContent.replace(
-      /<script>\s*setTimeout\(\(\) => \{[\s\S]*?<\/script>/g,
-      '<!-- Timeout tip script removed -->'
+      /<script\b(?![^>]*\bsrc\s*=)[^>]*>[\s\S]*?<\/script\s*>/gi,
+      "<!-- Inline script removed for extension CSP compliance -->"
     )
     
     // Remove external CDN scripts (CSP violation - these are loaded from external domains)

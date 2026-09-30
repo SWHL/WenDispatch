@@ -52,7 +52,7 @@ export interface SerializeOptions {
   /** 图片 URL 映射（assetId → 平台 URL） */
   imageUrlMap?: Map<string, string>;
   /** 公式渲染方式 */
-  mathMode?: 'latex' | 'image' | 'html';
+  mathMode?: 'latex' | 'html';
   /** 复杂表格处理方式 */
   complexTableMode?: 'html' | 'simplify' | 'image';
   /** 列表标记 */
@@ -244,10 +244,6 @@ function serializeMermaidBlockToMd(node: MermaidBlockNode, opts: SerializeOption
 }
 
 function serializeMathBlockToMd(node: MathBlockNode, opts: SerializeOptions): string {
-  if (opts.mathMode === 'latex') {
-    return `$$\n${node.tex}\n$$`;
-  }
-  // TODO: 支持图片模式
   return `$$\n${node.tex}\n$$`;
 }
 

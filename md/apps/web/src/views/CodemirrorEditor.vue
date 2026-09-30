@@ -124,7 +124,6 @@ function toggleView() {
   showEditor.value = !showEditor.value
 }
 
-
 const previewRef = useTemplateRef<HTMLDivElement>(`previewRef`)
 
 const timeout = ref<NodeJS.Timeout>()
@@ -134,7 +133,6 @@ const themeCompartment = new Compartment()
 // 使浏览区与编辑区滚动条建立同步联系
 function leftAndRightScroll() {
   const scrollCB = (text: string) => {
-
     let source: HTMLElement | null
     let target: HTMLElement | null
 
@@ -814,7 +812,6 @@ onUnmounted(() => {
           <component :is="showEditor ? Eye : Pen" class="h-5 w-5" />
         </button>
       </div>
-
 
       <UploadImgDialog @upload-image="uploadImage" />
 

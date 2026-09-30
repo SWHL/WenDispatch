@@ -1,9 +1,9 @@
 /**
  * 微信公众号编辑器注入脚本
- * 
+ *
  * 使用微信官方 __MP_Editor_JSAPI__ API 实现内容填充
  * 参考文档：微信公众号编辑器 JSAPI 文档
- * 
+ *
  * 支持的 API：
  * - mp_editor_get_isready: 获取编辑器状态
  * - mp_editor_set_content: 设置全文内容（需要 isNew=true）
@@ -44,7 +44,7 @@ function hasOfficialAPI(): boolean {
 function waitForEditorReady(timeout: number): Promise<EditorReadyResult | null> {
   return new Promise((resolve) => {
     const start = Date.now()
-    
+
     function check() {
       if (!hasOfficialAPI()) {
         if (Date.now() - start > timeout) {
@@ -66,7 +66,8 @@ function waitForEditorReady(timeout: number): Promise<EditorReadyResult | null> 
           if (result && result.isReady) {
             console.log(`[injected] ✓ 编辑器已就绪，isNew=${result.isNew}`)
             resolve(result)
-          } else {
+          }
+          else {
             if (Date.now() - start > timeout) {
               console.warn(`[injected] 编辑器就绪等待超时`)
               resolve(null)
@@ -85,11 +86,10 @@ function waitForEditorReady(timeout: number): Promise<EditorReadyResult | null> 
         },
       })
     }
-    
+
     check()
   })
 }
-
 
 /**
  * 使用 mp_editor_set_content 设置全文内容
@@ -136,7 +136,7 @@ function insertHtmlViaAPI(html: string): Promise<boolean> {
     const api = getAPI()
     api.invoke({
       apiName: `mp_editor_insert_html`,
-      apiParam: { 
+      apiParam: {
         html,
         isSelect: false,
       },
@@ -245,18 +245,17 @@ function showNotification(message: string, type: `success` | `error`): void {
     z-index: 999999;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     transition: opacity 0.3s ease;
-    ${type === `success` 
-      ? `background: #52c41a; color: white;` 
+    ${type === `success`
+      ? `background: #52c41a; color: white;`
       : `background: #ff4d4f; color: white;`}
   `
   document.body.appendChild(toast)
-  
+
   setTimeout(() => {
     toast.style.opacity = `0`
     setTimeout(() => toast.remove(), 300)
   }, 3000)
 }
-
 
 /**
  * 主要的内容填充逻辑
@@ -271,7 +270,7 @@ async function fillContent(payload: PublishPayload): Promise<void> {
   // Step 1: 等待编辑器就绪
   console.log(`[injected] Step 1: 等待编辑器就绪`)
   const editorState = await waitForEditorReady(15000)
-  
+
   if (!editorState) {
     console.error(`[injected] ✗ 编辑器未就绪，无法填充内容`)
     showNotification(`编辑器未就绪，请刷新页面后重试`, `error`)
@@ -292,7 +291,7 @@ async function fillContent(payload: PublishPayload): Promise<void> {
 
   // Step 4: 填充正文
   console.log(`[injected] Step 4: 填充正文`)
-  
+
   // 检查是否为新编辑器（isNew=true 才能使用 set_content 和 insert_html）
   if (!editorState.isNew) {
     console.warn(`[injected] ⚠ 当前为旧编辑器（isNew=false），API 可能不支持`)
@@ -301,7 +300,7 @@ async function fillContent(payload: PublishPayload): Promise<void> {
 
   // 优先使用 mp_editor_set_content
   let success = await setContentViaAPI(payload.content)
-  
+
   // 如果失败，尝试 mp_editor_insert_html
   if (!success) {
     console.log(`[injected] mp_editor_set_content 失败，尝试 mp_editor_insert_html`)
@@ -314,7 +313,8 @@ async function fillContent(payload: PublishPayload): Promise<void> {
     console.log(`[injected] ✓ 内容填充成功！`)
     console.log(`[injected] ========================================`)
     showNotification(`内容已自动填充，请检查排版后发布`, `success`)
-  } else {
+  }
+  else {
     console.error(`[injected] ========================================`)
     console.error(`[injected] ✗ 内容填充失败`)
     console.error(`[injected] ========================================`)
@@ -339,7 +339,7 @@ export default defineUnlistedScript(() => {
     if (event.data.type === `copyToMp`) {
       console.log(`[injected] 收到 copyToMp 事件`)
       const content = event.data.content as string
-      
+
       // 等待编辑器就绪
       const editorState = await waitForEditorReady(10000)
       if (!editorState) {

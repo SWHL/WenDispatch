@@ -839,4 +839,47 @@ pre,
   -ms-user-select: text;
   user-select: text;
 }
+
+/* Shared action button alignment. */
+:global(.app-toolbar-button),
+:global(.app-create-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+:global(.app-toolbar-button) {
+  padding-inline: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+:global(.app-refresh-button) { min-width: 68px; }
+
+:global(.app-create-button) {
+  min-height: 34px;
+  padding-inline: 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+:global(.app-toolbar-button svg),
+:global(.app-create-button svg) {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
+
+:global(.app-toolbar-button .n-button__content),
+:global(.app-create-button .n-button__content) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
 </style>

@@ -1,17 +1,17 @@
 /**
  * Math rendering initialization for Chrome extension environment
- * 
+ *
  * In Chrome extensions, external CDN scripts are blocked by CSP.
  * MathJax's browser version uses eval() which is also blocked by CSP.
  * This module uses mathjax-full (Node.js compatible) for math rendering in extension environment.
  */
 
-import { mathjax } from 'mathjax-full/js/mathjax.js'
-import { TeX } from 'mathjax-full/js/input/tex.js'
-import { SVG } from 'mathjax-full/js/output/svg.js'
 import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js'
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js'
+import { TeX } from 'mathjax-full/js/input/tex.js'
 import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js'
+import { mathjax } from 'mathjax-full/js/mathjax.js'
+import { SVG } from 'mathjax-full/js/output/svg.js'
 
 let mathInitialized = false
 let mathjaxDocument: any = null
@@ -27,9 +27,9 @@ export function isExtensionEnvironment(): boolean {
  * Check if MathJax is already available (loaded from CDN in non-extension env)
  */
 export function isMathJaxAvailable(): boolean {
-  return typeof window !== 'undefined' && 
-         typeof (window as any).MathJax !== 'undefined' && 
-         typeof (window as any).MathJax.tex2svg === 'function'
+  return typeof window !== 'undefined'
+    && typeof (window as any).MathJax !== 'undefined'
+    && typeof (window as any).MathJax.tex2svg === 'function'
 }
 
 /**
@@ -43,7 +43,8 @@ export function isLocalMathJaxReady(): boolean {
  * Initialize mathjax-full for extension environment
  */
 function initLocalMathJax(): void {
-  if (mathjaxDocument) return
+  if (mathjaxDocument)
+    return
 
   const adaptor = liteAdaptor()
   RegisterHTMLHandler(adaptor)
@@ -94,12 +95,12 @@ export async function initMathJax(): Promise<void> {
  */
 export async function ensureMathJax(): Promise<boolean> {
   await initMathJax()
-  
+
   // In extension environment, use local mathjax-full
   if (isExtensionEnvironment()) {
     return isLocalMathJaxReady()
   }
-  
+
   // In non-extension environment, use MathJax from CDN
   return isMathJaxAvailable()
 }
@@ -116,18 +117,20 @@ export function renderMathWithLocalMathJax(tex: string, displayMode: boolean): s
     const node = mathjaxDocument.convert(tex, { display: displayMode })
     const adaptor = mathjaxDocument.adaptor
     let svg = adaptor.outerHTML(node)
-    
+
     // Add inline styles for proper display
     if (!displayMode) {
       // Inline math: adjust vertical alignment
       svg = svg.replace(/<svg/, '<svg style="vertical-align: middle; display: inline-block;"')
-    } else {
+    }
+    else {
       // Display math: center and add margin
       svg = svg.replace(/<svg/, '<svg style="display: block; margin: 1em auto;"')
     }
-    
+
     return svg
-  } catch {
+  }
+  catch {
     const escapedText = tex
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -149,7 +152,8 @@ export function renderPendingMathWithKaTeX(container: Document | Element = docum
 
   pendingElements.forEach((element) => {
     const encodedTex = element.getAttribute('data-math-tex')
-    if (!encodedTex) return
+    if (!encodedTex)
+      return
 
     const tex = decodeURIComponent(encodedTex)
     const isBlock = element.classList.contains('math-block')
@@ -159,7 +163,8 @@ export function renderPendingMathWithKaTeX(container: Document | Element = docum
       element.innerHTML = rendered
       element.classList.remove('math-pending')
       element.removeAttribute('data-math-tex')
-    } catch {
+    }
+    catch {
       // Silently fail for individual math elements
     }
   })

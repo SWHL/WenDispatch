@@ -17,11 +17,11 @@
       </div>
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-white"
+        class="app-toolbar-button app-refresh-button"
         :class="
           isDark
-            ? 'bg-[#789186] hover:bg-[#879f93]'
-            : 'bg-[#60786d] hover:bg-[#52685e]'
+            ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
         "
         @click="loadJobs"
       >
@@ -67,7 +67,7 @@
             v-for="tab in filterTabs"
             :key="tab.key"
             type="button"
-            class="appearance-none rounded-md border px-3 py-1.5 text-sm transition-colors"
+            class="group relative flex h-9 items-center justify-center gap-2 rounded-md border-none px-2 text-sm font-medium outline-none transition-colors select-none"
             :class="
               filter === tab.key
                 ? isDark

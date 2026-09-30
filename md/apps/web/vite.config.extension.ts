@@ -9,7 +9,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 /**
  * Extension-specific Vite configuration for md-editor
- * 
+ *
  * This config builds the md project for integration into the SyncCaster extension.
  * Key differences from the main config:
  * - Base path is relative (./) for extension compatibility

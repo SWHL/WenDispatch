@@ -55,6 +55,7 @@
             <AppIcon name="save" />
             <span>保存</span>
           </button>
+          <button class="header-action-btn" @click="showPublicationNotes = true" title="设置首部声明和尾注"><AppIcon name="article" /><span>首部/尾注</span></button>
           <button class="header-action-btn" @click="goBack" title="返回文章列表">
             <AppIcon name="arrowLeft" />
             <span>返回</span>
@@ -65,6 +66,27 @@
           </button>
         </div>
       </div>
+      <Teleport to="body">
+        <div v-if="showPublicationNotes" class="modal-overlay" @click.self="showPublicationNotes = false">
+          <div class="publish-dialog notes-dialog" :class="{ dark: isDark }" @click.stop>
+            <div class="dialog-header">
+              <h3>首部声明与尾注</h3>
+              <button @click="showPublicationNotes = false" class="close-btn" title="关闭"><AppIcon name="xmark" /></button>
+            </div>
+            <div class="dialog-body notes-body">
+              <div class="notes-field">
+                <label for="header-note">首部声明（支持 Markdown）</label>
+                <textarea id="header-note" v-model="headerNote" rows="4" placeholder="> 首发于：xxxxxx"></textarea>
+              </div>
+              <div class="notes-field">
+                <label for="footer-note">尾注（支持 Markdown）</label>
+                <textarea id="footer-note" v-model="footerNote" rows="4" placeholder="感谢阅读"></textarea>
+              </div>
+            </div>
+            <div class="dialog-footer"><button class="publish-btn" @click="showPublicationNotes = false">完成</button></div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 封面上传入口：位于标题下方，独立于正文图片 -->
       <div v-if="editorTab === 'general'" class="cover-section cover-inline">
@@ -291,6 +313,9 @@ const notFound = ref(false);
 const id = ref<string>('');
 const title = ref('');
 const body = ref('');
+const headerNote = ref('');
+const footerNote = ref('');
+const showPublicationNotes = ref(false);
 const sourceUrl = ref('');
 const images = ref<any[]>([]);
 const cover = ref<any>(null);
@@ -319,10 +344,14 @@ const editorMainRef = ref<HTMLDivElement | null>(null);
 // 未保存修改状态追踪
 const savedTitle = ref('');
 const savedBody = ref('');
+const savedHeaderNote = ref('');
+const savedFooterNote = ref('');
 const savedCoverUrl = ref('');
 const hasUnsavedChanges = computed(() =>
   title.value !== savedTitle.value ||
   body.value !== savedBody.value ||
+  headerNote.value !== savedHeaderNote.value ||
+  footerNote.value !== savedFooterNote.value ||
   String(cover.value?.url || '') !== savedCoverUrl.value,
 );
 
@@ -856,10 +885,31 @@ const allSelected = computed(() => {
   return available.length > 0 && available.every(a => selectedAccounts.value.includes(a.id));
 });
 
+function withPublicationNotes(markdown: string): string {
+  const header = headerNote.value.trim();
+  const footer = footerNote.value.trim();
+  if (!header && !footer) return markdown;
+
+  const match = markdown.match(/^\uFEFF?(?:---|= yaml =)[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/);
+  const frontMatter = match?.[0] || "";
+  const body = match ? markdown.slice(frontMatter.length) : markdown;
+  return `${frontMatter}${header ? `${header}\n\n` : ""}${body.trimStart()}${footer ? `\n\n${footer}` : ""}`;
+}
+function withoutPublicationNotes(markdown: string): string {
+  const header = headerNote.value.trim(); const footer = footerNote.value.trim();
+  if (!header && !footer) return markdown;
+  const match = markdown.match(/^\uFEFF?(?:---|= yaml =)[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/);
+  const frontMatter = match?.[0] || "";
+  let content = match ? markdown.slice(frontMatter.length) : markdown;
+  const hp = header ? header + "\n\n" : ""; const fs = footer ? "\n\n" + footer : "";
+  if (hp) while (content.startsWith(hp)) content = content.slice(hp.length);
+  if (fs) while (content.endsWith(fs)) content = content.slice(0, -fs.length);
+  return frontMatter + content;
+}
 const previewHtml = computed(() => {
   if (!body.value) return '<p class="empty-hint">暂无内容</p>';
   try {
-    return renderMarkdownPreview(resolveLocalImageUrls(body.value));
+    return renderMarkdownPreview(resolveLocalImageUrls(withPublicationNotes(body.value)));
   }
   catch { return '<pre class="error-hint">Markdown 解析失败</pre>'; }
 });
@@ -872,6 +922,10 @@ function resolveLocalImageUrls(markdown: string): string {
       return asset?.blobUrl ? `![${alt}](${asset.blobUrl})` : match;
     },
   );
+}
+
+function normalizeSyncedTitle(value: string, content: string): string {
+  return String(value || '') === '未命名标题' && !String(content || '').trim() ? '' : String(value || '');
 }
 
 function normalizeSyncedContent(markdown: string): string {
@@ -1007,13 +1061,17 @@ async function load() {
     const pid = parseIdFromHash();
     id.value = pid;
     if (pid === 'new' || !pid) { 
-      title.value = ''; 
-      body.value = ''; 
+      title.value = '';
+      body.value = '';
+      headerNote.value = '';
+      footerNote.value = '';
       images.value = [];
       cover.value = null;
       sourceUrl.value = ''; 
       savedTitle.value = '';
       savedBody.value = '';
+      savedHeaderNote.value = '';
+      savedFooterNote.value = '';
       savedCoverUrl.value = '';
       loading.value = false; 
       return; 
@@ -1022,12 +1080,18 @@ async function load() {
     if (!post) { notFound.value = true; return; }
     title.value = post.title || '';
     body.value = post.body_md || '';
+    headerNote.value = String((post.meta as any)?.headerNote || '');
+    footerNote.value = String((post.meta as any)?.footerNote || '');
+    savedHeaderNote.value = headerNote.value;
+    savedFooterNote.value = footerNote.value;
     sourceUrl.value = post.url || post.canonicalUrl || '';
     images.value = Array.isArray(post.assets) ? post.assets.filter((a: any) => a.type === 'image') : [];
     cover.value = post.cover || null;
     // 记录保存状态
     savedTitle.value = title.value;
     savedBody.value = body.value;
+    savedHeaderNote.value = headerNote.value;
+    savedFooterNote.value = footerNote.value;
     savedCoverUrl.value = String(cover.value?.url || '');
   } finally { loading.value = false; }
 }
@@ -1075,12 +1139,14 @@ async function persistArticle(options: { routeAfterCreate?: boolean } = {}) {
   if (!id.value || id.value === 'new') {
     const now = Date.now();
     const newId = crypto.randomUUID?.() || `${now}-${Math.random().toString(36).slice(2, 8)}`;
-    const post = { id: newId, version: 1, title: title.value, summary: body.value.slice(0, 200), canonicalUrl: '', createdAt: now, updatedAt: now, body_md: body.value, tags: [], categories: [], assets: allAssets, cover: coverSnapshot, meta: {} };
+    const post = { id: newId, version: 1, title: title.value, summary: body.value.slice(0, 200), canonicalUrl: '', createdAt: now, updatedAt: now, body_md: body.value, tags: [], categories: [], assets: allAssets, cover: coverSnapshot, meta: { headerNote: headerNote.value, footerNote: footerNote.value } };
     await db.posts.add(post as any);
     // 更新当前文章 ID，避免重复创建
     id.value = newId;
     savedTitle.value = title.value;
     savedBody.value = body.value;
+    savedHeaderNote.value = headerNote.value;
+    savedFooterNote.value = footerNote.value;
     savedCoverUrl.value = String(cover.value?.url || '');
     if (routeAfterCreate) {
       window.location.hash = `editor/${post.id}`;
@@ -1090,10 +1156,12 @@ async function persistArticle(options: { routeAfterCreate?: boolean } = {}) {
     showCopySuccess('文章已保存');
     return true;
   }
-  const updated = await db.posts.update(id.value, { title: title.value, body_md: body.value, summary: body.value.slice(0, 200), updatedAt: Date.now(), assets: allAssets, cover: coverSnapshot } as any);
+  const updated = await db.posts.update(id.value, { title: title.value, body_md: body.value, summary: body.value.slice(0, 200), updatedAt: Date.now(), assets: allAssets, cover: coverSnapshot, meta: { ...((await db.posts.get(id.value)) as any)?.meta, headerNote: headerNote.value, footerNote: footerNote.value } } as any);
   if (!updated) throw new Error('文章不存在，无法保存');
   savedTitle.value = title.value;
   savedBody.value = body.value;
+    savedHeaderNote.value = headerNote.value;
+    savedFooterNote.value = footerNote.value;
   savedCoverUrl.value = String(cover.value?.url || '');
   showCopySuccess('文章已保存');
   return true;
@@ -1110,17 +1178,26 @@ function goBack() {
 
 async function switchEditorTab(tab: EditorTab) {
   if (editorTab.value === tab) return;
-  // Persist the current draft before handing it to the embedded editor.
-  if (hasUnsavedChanges.value) {
+  // Only persist before handing a general-editor draft to the embedded editor.
+  // Returning from WeChat must allow an empty new draft and sync its latest state first.
+  if (tab === 'wechat' && hasUnsavedChanges.value && title.value.trim() && body.value.trim()) {
     const saved = await save({ routeAfterCreate: false });
     if (!saved) return;
+  } else if (
+    tab === 'wechat' &&
+    hasUnsavedChanges.value &&
+    id.value !== 'new' &&
+    (!title.value.trim() || !body.value.trim())
+  ) {
+    showValidationError('已有文章的标题和正文不能为空，请先补全或放弃修改');
+    return;
   }
   if (tab === 'wechat') {
     try {
       await ChromeStorageBridge.saveArticle({
         id: id.value,
-        title: title.value || '未命名标题',
-        content: resolveLocalImageUrls(body.value || ''),
+        title: title.value,
+        content: resolveLocalImageUrls(withPublicationNotes(body.value || '')),
         sourceUrl: sourceUrl.value || undefined,
         updatedAt: Date.now(),
       });
@@ -1275,8 +1352,9 @@ async function syncFromStorage() {
   try {
     const article = await ChromeStorageBridge.loadArticle();
     if (article && article.id === id.value && (article.content !== body.value || article.title !== title.value)) {
-      title.value = article.title;
-      body.value = normalizeSyncedContent(article.content);
+      const syncedBody = withoutPublicationNotes(normalizeSyncedContent(article.content));
+      title.value = normalizeSyncedTitle(article.title, syncedBody);
+      body.value = syncedBody;
     }
   } catch {}
 }
@@ -1289,8 +1367,9 @@ function setupStorageListener() {
   try {
     unsubscribeStorageChange = ChromeStorageBridge.onArticleChange((article) => {
       if (article && article.id === id.value && (article.content !== body.value || article.title !== title.value)) {
-        title.value = article.title;
-        body.value = normalizeSyncedContent(article.content);
+        const syncedBody = withoutPublicationNotes(normalizeSyncedContent(article.content));
+        title.value = normalizeSyncedTitle(article.title, syncedBody);
+        body.value = syncedBody;
       }
     });
   } catch {}
@@ -1497,6 +1576,12 @@ onUnmounted(() => {
 .publish-dialog.dark .close-btn { background: #374151; color: #d1d5db; }
 .publish-dialog.dark .close-btn:hover { background: #4b5563; color: #f3f4f6; }
 .dialog-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+.notes-body { display: flex; flex-direction: column; gap: 14px; }
+.notes-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.notes-field label { display: block; color: #374151; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.notes-field textarea { display: block; width: 100%; min-height: 92px; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #1f2937; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+.publish-dialog.dark .notes-field label { color: #e5e7eb; }
+.publish-dialog.dark .notes-field textarea { border-color: #4b5563; background: #111827; color: #f3f4f6; }
 .article-info { background: #f9fafb; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
 .publish-dialog.dark .article-info { background: #111827; }
 .info-label { font-size: 10px; color: #6b7280; margin-bottom: 3px; }

@@ -15,18 +15,15 @@
           @click="deleteSelected"
         >
           <AppIcon
-            name="trash"
-            class="mr-1"
-          /> 删除选中 ({{ selectedIds.length }})
+            name="trash"          /> 删除选中 ({{ selectedIds.length }})
         </n-button>
         <n-button
           type="primary"
+          class="app-create-button"
           @click="createPost"
         >
           <AppIcon
-            name="plus"
-            class="mr-1"
-          />新建文章
+            name="plus"          />新建文章
         </n-button>
       </div>
     </div>

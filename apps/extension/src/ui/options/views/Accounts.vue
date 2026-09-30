@@ -9,14 +9,14 @@
           <span class="section-title">已绑定账号</span>
           <span class="section-count">{{ accounts.length }}</span>
         </div>
-        <n-button 
+        <n-button
           v-if="accounts.length > 0"
-          size="small" 
-          quaternary
+          class="app-toolbar-button app-refresh-button"
+          :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
           :loading="refreshingAll"
           @click="refreshAllAccounts"
         >
-          刷新
+          <AppIcon name="refresh" />刷新
         </n-button>
       </div>
       

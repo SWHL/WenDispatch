@@ -10,91 +10,90 @@
       content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
     />
     <title>微信 Markdown 编辑器 | Doocs 开源社区</title>
+    <style>
+      html,
+      body,
+      #app {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        background: #f7faf8;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html,
+        body,
+        #app {
+          background: #191919;
+        }
+      }
+
+      .loading {
+        display: flex;
+        min-height: 100vh;
+        box-sizing: border-box;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: #33443b;
+        background: #f7faf8;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      .loading span {
+        color: #718078;
+        font-size: 14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .loading {
+          color: #f3f4f6;
+          background: #191919;
+        }
+        .loading span {
+          color: #a3aaa6;
+        }
+      }
+
+      html[data-embedded-theme='dark'] .loading {
+        color: #f3f4f6;
+        background: #191919;
+      }
+
+      html[data-embedded-theme='dark'] .loading span {
+        color: #a3aaa6;
+      }
+
+      html[data-embedded-theme='light'],
+      html[data-embedded-theme='light'] body,
+      html[data-embedded-theme='light'] #app {
+        background: #f7faf8;
+      }
+    </style>
     <link rel="shortcut icon" href="https://cdn-doocs.oss-cn-shenzhen.aliyuncs.com/gh/doocs/md/images/favicon.png" />
     <link
       rel="apple-touch-icon-precomposed"
       href="https://cdn-doocs.oss-cn-shenzhen.aliyuncs.com/gh/doocs/md/images/1648303220922-7e14aefa-816e-44c1-8604-ade709ca1c69.png"
     />
-    <style>
-      .loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 99999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        width: 100vw;
-        height: 100vh;
-        font-size: 18px;
-      }
-
-      .loading::before {
-        content: url('/src/assets/images/favicon.png');
-        width: 100px;
-        height: 100px;
-        margin-bottom: 26px;
-      }
-
-      .loading.dark {
-        color: #ffffff;
-        background-color: #141414;
-      }
-
-      .loading .txt {
-        position: absolute;
-        bottom: 10%;
-      }
-
-      .loading .txt::after {
-        content: '...';
-        animation: dots 1.5s steps(4, end) infinite;
-      }
-
-      @keyframes dots {
-        0% {
-          content: ' ';
-        }
-        25% {
-          content: '.';
-        }
-        50% {
-          content: '..';
-        }
-        75% {
-          content: '...';
-        }
-      }
-    </style>
   </head>
 
   <body>
     <noscript>
       <strong>Please enable JavaScript to continue.</strong>
     </noscript>
+    <script>
+      const embeddedTheme = new URLSearchParams(window.location.search).get('theme')
+      if (embeddedTheme === 'dark' || embeddedTheme === 'light') {
+        document.documentElement.dataset.embeddedTheme = embeddedTheme
+      }
+    </script>
     <div id="app">
-      <div class="loading">
+      <div class="loading" role="status" aria-live="polite">
         <strong>致力于让 Markdown 编辑更简单</strong>
-        <p class="txt">正在加载编辑器</p>
-        <p class="timeout-tip" style="display: none; color: #e53935; font-size: 16px; margin-top: 2em">
-          加载时间过长，请尝试刷新页面或按 F12 查看控制台是否有异常信息
-        </p>
+        <span>正在加载编辑器</span>
       </div>
     </div>
-    <script>
-      const theme = localStorage.getItem('vueuse-color-scheme')
-      if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.querySelector('.loading').classList.add('dark')
-      }
-
-      setTimeout(() => {
-        const tip = document.querySelector('.loading .timeout-tip')
-        if (tip) {
-          tip.style.display = 'block'
-        }
-      }, 30000)
-    </script>
     <script>
       window.MathJax = {
         tex: { tags: 'ams' },

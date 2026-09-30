@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { highlightPendingBlocks, hljs } from '@md/core'
 import { widthOptions } from '@md/shared/configs'
-import { Copy, Menu, Monitor, Palette, Send, Smartphone } from 'lucide-vue-next'
+import { Copy, FileText, Menu, Monitor, Palette, Send, Smartphone } from 'lucide-vue-next'
 import { useEditorStore } from '@/stores/editor'
 import { useExportStore } from '@/stores/export'
 import { usePostStore } from '@/stores/post'
@@ -45,6 +45,22 @@ const currentPostTitle = computed({
 
 const mobilePreviewWidth = widthOptions[0].value
 const desktopPreviewWidth = widthOptions[1].value
+
+function editPublicationNotes() {
+  if (!currentPost.value)
+    return
+  // eslint-disable-next-line no-alert
+  const header = window.prompt('首部声明（支持 Markdown，留空表示不添加）', currentPost.value.headerNote ?? ``)
+  if (header === null)
+    return
+  // eslint-disable-next-line no-alert
+  const footer = window.prompt('尾注（支持 Markdown，留空表示不添加）', currentPost.value.footerNote ?? ``)
+  if (footer === null)
+    return
+  postStore.updatePostNotes(currentPost.value.id, { headerNote: header, footerNote: footer })
+  editorRefresh()
+  toast.success(`发布声明已保存`)
+}
 
 function togglePreviewMode() {
   previewWidth.value = previewWidth.value === mobilePreviewWidth
@@ -476,6 +492,17 @@ async function handlePublishToWechat() {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      <Button
+        variant="outline"
+        size="icon"
+        class="h-9 w-9"
+        title="首部声明与尾注"
+        aria-label="首部声明与尾注"
+        @click="editPublicationNotes"
+      >
+        <FileText class="h-4 w-4" />
+      </Button>
 
       <!-- 复制按钮 -->
       <Button

@@ -10,7 +10,8 @@ export async function initializeMermaid() {
       const mermaid = await import(`mermaid`)
       mermaid.default.initialize({ startOnLoad: false })
     }
-  } catch (error) {
+  }
+  catch (error) {
     // Mermaid initialization failed (may happen in Chrome extension due to CSP)
     console.warn('[md-editor] Mermaid initialization failed:', error)
   }

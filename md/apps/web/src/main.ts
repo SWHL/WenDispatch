@@ -39,11 +39,12 @@ if (isInExtension) {
       if (articleData) {
         // 触发自定义事件，让 post store 处理内容加载
         window.dispatchEvent(new CustomEvent('synccaster-load-content', {
-          detail: articleData
+          detail: articleData,
         }))
         console.log('[SyncCaster] Content loaded from extension storage')
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[SyncCaster] Failed to load content from extension:', error)
     }
   }, 100)

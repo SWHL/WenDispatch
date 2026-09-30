@@ -11,6 +11,8 @@ export interface Post {
   id: string
   title: string
   content: string
+  footerNote?: string
+  headerNote?: string
   history: {
     datetime: string
     content: string
@@ -139,6 +141,18 @@ export const usePostStore = defineStore(`post`, () => {
     }
   }
 
+  // 更新发布首部声明和尾注
+  const updatePostNotes = (id: string, notes: { headerNote?: string, footerNote?: string }) => {
+    const post = getPostById(id)
+    if (post) {
+      if (notes.headerNote !== undefined)
+        post.headerNote = notes.headerNote
+      if (notes.footerNote !== undefined)
+        post.footerNote = notes.footerNote
+      post.updateDatetime = new Date()
+    }
+  }
+
   // 收起所有文章
   const collapseAllPosts = () => {
     posts.value.forEach((post) => {
@@ -166,7 +180,8 @@ export const usePostStore = defineStore(`post`, () => {
       try {
         await SyncCasterAdapter.saveToExtension(title, content)
         console.log('[SyncCaster] Auto-saved to extension storage')
-      } catch (error) {
+      }
+      catch (error) {
         console.error('[SyncCaster] Auto-save failed:', error)
       }
     }, SAVE_DEBOUNCE_MS)
@@ -174,7 +189,7 @@ export const usePostStore = defineStore(`post`, () => {
 
   // 监听当前文章变化，自动保存到 Chrome Storage
   const isInExtension = SyncCasterAdapter.isInExtension()
-  
+
   if (isInExtension) {
     watch(
       () => currentPost.value,
@@ -183,7 +198,7 @@ export const usePostStore = defineStore(`post`, () => {
           debouncedSaveToExtension(post.title, post.content)
         }
       },
-      { deep: true }
+      { deep: true },
     )
   }
 
@@ -198,17 +213,17 @@ export const usePostStore = defineStore(`post`, () => {
     }
 
     // 监听 SyncCaster 扩展的内容加载事件
-    window.addEventListener('synccaster-load-content', ((event: CustomEvent<{ title: string; content: string }>) => {
+    window.addEventListener('synccaster-load-content', ((event: CustomEvent<{ title: string, content: string }>) => {
       const { title, content } = event.detail
       const post = getPostById(currentPostId.value)
       if (post) {
         post.title = title || post.title
         post.content = content
         post.updateDatetime = new Date()
-        
+
         // 触发编辑器内容更新事件
         window.dispatchEvent(new CustomEvent('synccaster-editor-update', {
-          detail: { content }
+          detail: { content },
         }))
       }
     }) as EventListener)
@@ -231,6 +246,7 @@ export const usePostStore = defineStore(`post`, () => {
     delPost,
     updatePostParentId,
     updatePostContent,
+    updatePostNotes,
     collapseAllPosts,
     expandAllPosts,
   }

@@ -31,6 +31,17 @@ export {
   toBase64,
 }
 
+export function applyPublicationNotes(raw: string, headerNote = ``, footerNote = ``): string {
+  const header = headerNote.trim()
+  const footer = footerNote.trim()
+  if (!header && !footer)
+    return raw
+  const match = raw.match(/^\uFEFF?(?:---|= yaml =)[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/)
+  const frontMatter = match?.[0] ?? ``
+  const body = match ? raw.slice(frontMatter.length) : raw
+  return `${frontMatter}${header ? `${header}\n\n` : ``}${body.trimStart()}${footer ? `\n\n${footer}` : ``}`
+}
+
 // 导出新主题系统需要的函数
 export {
   modifyHtmlContent,

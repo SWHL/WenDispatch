@@ -432,7 +432,9 @@ function emitUploads(file: File) {
               </SelectContent>
             </Select>
           </Label>
-          <p class="mt-3 text-sm text-muted-foreground">本地保存不会发送图片。选择并配置图床后，插入的图片会上传到该服务，其可见性由你的图床设置决定。</p>
+          <p class="mt-3 text-sm text-muted-foreground">
+            本地保存不会发送图片。选择并配置图床后，插入的图片会上传到该服务，其可见性由你的图床设置决定。
+          </p>
           <Label label="UseCompression">
             <span class="my-4 block">
               开启本地图片压缩（JPEG / PNG）
@@ -1152,7 +1154,6 @@ function emitUploads(file: File) {
             </FormItem>
           </Form>
         </TabsContent>
-
       </Tabs>
     </DialogContent>
   </Dialog>

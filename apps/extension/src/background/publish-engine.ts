@@ -113,6 +113,16 @@ export async function appendJobLog(jobId: string, entry: Omit<LogEntry, 'id' | '
 type DownloadedImage = { url: string; base64: string; mimeType: string };
 type ImageInput = string | AssetManifest['images'][number];
 
+function applyPublicationNotes(markdown: string, meta?: Record<string, any>): string {
+  const header = String(meta?.headerNote || '').trim();
+  const footer = String(meta?.footerNote || '').trim();
+  if (!header && !footer) return markdown;
+
+  const frontMatter = markdown.match(/^\uFEFF?(?:---|= yaml =)[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/)?.[0] || '';
+  const body = frontMatter ? markdown.slice(frontMatter.length) : markdown;
+  return `${frontMatter}${header ? `${header}\n\n` : ''}${body.trimStart()}${footer ? `\n\n${footer}` : ''}`;
+}
+
 // 同一个 job 可能会并发发布多个平台：图片下载可复用，避免重复下载拖慢整体速度
 const jobDownloadedImagesCache = new Map<
   string,
@@ -193,7 +203,8 @@ export async function publishToTarget(
     // 处理图片/内容预处理
     // 注意：部分来源的 Markdown 图片链接会混入空格/换行（例如 `. jpeg`），导致平台/上传无法识别。
     // 这里先规范化图片语法里的 URL，保证后续提取、上传、替换都基于同一个“干净 URL”。
-    let bodyMd = replaceLinkedMarkdownImagesWithPlainImages(post.body_md || '');
+    let bodyMd = applyPublicationNotes(post.body_md || '', (post as any).meta);
+    bodyMd = replaceLinkedMarkdownImagesWithPlainImages(bodyMd);
     bodyMd = normalizeMarkdownImageUrls(bodyMd);
 
     let processedPost = {

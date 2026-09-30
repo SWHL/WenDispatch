@@ -21,7 +21,7 @@
     <!-- 最近活动 -->
     <n-card title="最近活动" class="mb-6">
       <template #header-extra>
-        <n-button text type="primary" size="small" @click="loadActivities"><AppIcon name="refresh" class="mr-1" />刷新</n-button>
+        <n-button class="app-toolbar-button app-refresh-button" :class="isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'" @click="loadActivities"><AppIcon name="refresh" />刷新</n-button>
       </template>
       <n-empty v-if="recentActivities.length === 0" description="暂无活动记录" />
       <n-timeline v-else>
@@ -40,7 +40,7 @@
     <!-- 快速操作 -->
     <n-card title="快速操作">
       <div class="flex gap-4">
-        <n-button type="primary" @click="createNewPost"><AppIcon name="edit" class="mr-1" />新建文章</n-button>
+        <n-button type="primary" class="app-create-button" @click="createNewPost"><AppIcon name="edit" />新建文章</n-button>
         <n-button @click="manageAccounts"><AppIcon name="account" class="mr-1" />管理账号</n-button>
         <n-button @click="viewTasks"><AppIcon name="task" class="mr-1" />查看任务</n-button>
       </div>

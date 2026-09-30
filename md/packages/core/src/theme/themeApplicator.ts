@@ -43,12 +43,27 @@ export async function applyTheme(config: ThemeConfig): Promise<void> {
 
   // 5. 给主题 CSS 添加作用域（只影响 #output 预览区域）
   const scopedThemeCSS = wrapCSSWithScope(themeCSS, `#output`)
+  // Markdown.com.cn themes may hard-code body text sizes in pixels. Keep the user-selected size as the final body-text value.
+  const fontSizeOverride = `
+#output,
+#output p,
+#output li,
+#output blockquote,
+#output td,
+#output th,
+#output figcaption,
+#output dt,
+#output dd {
+  font-size: var(--md-font-size) !important;
+}
+  `.trim()
 
   // 6. 拼接完整 CSS
   let mergedCSS = [
     variablesCSS, // CSS 变量（全局）
     baseCSSContent, // 基础样式（全局）
     scopedThemeCSS, // 主题样式（限制在 #output）
+    fontSizeOverride, // 用户字号覆盖主题中的固定正文尺寸
   ].filter(Boolean).join(`\n\n`)
 
   // 7. 使用 PostCSS 处理 CSS（简化 calc() 表达式等）

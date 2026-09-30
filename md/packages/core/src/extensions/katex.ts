@@ -17,10 +17,10 @@ const blockLatexRule = /^\\\[([^\\]*(?:\\.[^\\]*)*?)\\\]/
  * Check if MathJax is available and ready
  */
 function isMathJaxReady(): boolean {
-  return typeof window !== 'undefined' &&
-         typeof (window as any).MathJax !== 'undefined' &&
-         typeof (window as any).MathJax.tex2svg === 'function' &&
-         typeof (window as any).MathJax.texReset === 'function'
+  return typeof window !== 'undefined'
+    && typeof (window as any).MathJax !== 'undefined'
+    && typeof (window as any).MathJax.tex2svg === 'function'
+    && typeof (window as any).MathJax.texReset === 'function'
 }
 
 /**

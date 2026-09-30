@@ -1,5 +1,6 @@
 import { initRenderer } from '@md/core'
-import { postProcessHtml, renderMarkdown } from '@/utils'
+import { applyPublicationNotes, postProcessHtml, renderMarkdown } from '@/utils'
+import { usePostStore } from './post'
 
 /**
  * 渲染 Store
@@ -25,6 +26,7 @@ export const useRenderStore = defineStore(`render`, () => {
 
   // 渲染器实例（延迟初始化）
   let renderer: ReturnType<typeof initRenderer> | null = null
+  const postStore = usePostStore()
 
   /**
    * 初始化渲染器（新主题系统）
@@ -78,10 +80,12 @@ export const useRenderStore = defineStore(`render`, () => {
     })
 
     // 渲染 Markdown
-    const { html: baseHtml, readingTime: readingTimeResult } = renderMarkdown(content, renderer)
+    const post = postStore.currentPost
+    const publishContent = applyPublicationNotes(content, post?.headerNote, post?.footerNote)
+    const { html: baseHtml, readingTime: readingTimeResult } = renderMarkdown(publishContent, renderer)
 
     // 更新统计信息
-    readingTime.chars = content.length
+    readingTime.chars = publishContent.length
     readingTime.words = readingTimeResult.words
     readingTime.minutes = Math.ceil(readingTimeResult.minutes)
 

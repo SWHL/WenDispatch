@@ -81,7 +81,7 @@ export const useThemeStore = defineStore(`theme`, () => {
   const updateCodeTheme = () => {
     // 检查是否在 Chrome 扩展环境中
     const isExtension = window.location.protocol === 'chrome-extension:'
-    
+
     // 在扩展环境中，使用内联样式而不是外部 CDN（CSP 限制）
     if (isExtension) {
       // 使用内联样式注入 highlight.js 主题
@@ -99,7 +99,7 @@ export const useThemeStore = defineStore(`theme`, () => {
       }
       return
     }
-    
+
     // 非扩展环境，使用 CDN 加载
     const cssUrl = codeBlockTheme.value
     const el = document.querySelector(`#hljs`)
