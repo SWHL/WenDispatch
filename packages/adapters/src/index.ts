@@ -4,6 +4,7 @@ export * from './zhihu';
 export * from './juejin';
 export * from './csdn';
 export * from './cnblogs';
+export * from './preflight';
 
 import { FIRST_PHASE_PLATFORM_IDS, type FirstPhasePlatformId } from '@wendispatch/core';
 import { registry, type PlatformAdapter } from './base';

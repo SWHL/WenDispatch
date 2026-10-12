@@ -1,4 +1,5 @@
 export * from './types';
+export * from './types/preflight';
 export * from './db';
 export * from './config/default-publish-accounts';
 export * from './collector';

@@ -105,7 +105,17 @@
               secondary
               @click.stop="editPost(post.id)"
             >
+              <AppIcon name="edit" />
               编辑/发布
+            </n-button>
+            <n-button
+              size="small"
+              secondary
+              :aria-label="`复制文章：${post.title || '未命名文章'}`"
+              @click.stop="copyPost(post)"
+            >
+              <AppIcon name="copy" />
+              复制
             </n-button>
             <n-button
               size="small"
@@ -113,6 +123,7 @@
               quaternary
               @click.stop="deletePost(post.id)"
             >
+              <AppIcon name="trash" />
               删除
             </n-button>
           </div>
@@ -194,6 +205,40 @@ function formatTime(ts: number) {
 
 function createPost() { window.location.hash = 'editor/new'; }
 function editPost(id: string) { window.location.hash = `editor/${id}`; }
+
+function cloneValue<T>(value: T): T {
+  try {
+    if (typeof structuredClone === 'function') return structuredClone(value);
+  } catch (e) {
+    // Vue 的响应式对象在部分浏览器中不能直接 structuredClone，回退到 JSON 克隆。
+    console.debug('structuredClone unavailable for post, using JSON clone', e);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+async function copyPost(post: any) {
+  try {
+    const now = Date.now();
+    const id = crypto.randomUUID?.() || `${now}-${Math.random().toString(36).slice(2, 8)}`;
+    const copiedPost = cloneValue(post);
+
+    // 复制文章内容，但生成独立身份；发布任务和平台映射不会随文章复制。
+    copiedPost.id = id;
+    copiedPost.version = 1;
+    copiedPost.title = `${post.title || '未命名文章'}（副本）`;
+    copiedPost.createdAt = now;
+    copiedPost.updatedAt = now;
+    if ('created_at' in copiedPost) copiedPost.created_at = new Date(now).toISOString();
+    if ('updated_at' in copiedPost) copiedPost.updated_at = new Date(now).toISOString();
+
+    await db.posts.add(copiedPost);
+    message.success('文章已复制');
+    await loadPosts();
+  } catch (e) {
+    console.error('Failed to copy post:', e);
+    message.error('复制文章失败');
+  }
+}
 
 // 根据 source_url 判断文章来源平台
 function getSourcePlatform(post: any): string {

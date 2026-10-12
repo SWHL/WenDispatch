@@ -69,6 +69,7 @@
               :loading="reloginLoadingMap[account.id]"
               @click="reloginAccount(account)"
             >
+              <AppIcon name="refresh" />
               重新登录
             </n-button>
           </div>
@@ -107,6 +108,7 @@
             :loading="loginLoadingMap[platform.id]"
             @click="loginPlatform(platform.id)"
           >
+            <AppIcon name="arrowRight" />
             登录
           </n-button>
         </div>

@@ -55,6 +55,10 @@
             <AppIcon name="save" />
             <span>保存</span>
           </button>
+          <button class="header-action-btn snippet-header-btn" @click="openSnippetDialog" title="管理和插入常用 Markdown 片段">
+            <AppIcon name="article" />
+            <span>片段库</span>
+          </button>
           <button class="header-action-btn" @click="showPublicationNotes = true" title="设置首部声明和尾注"><AppIcon name="article" /><span>首部/尾注</span></button>
           <button class="header-action-btn" @click="goBack" title="返回文章列表">
             <AppIcon name="arrowLeft" />
@@ -147,6 +151,10 @@
             <button @click="triggerImageUpload" class="md-tool-btn" title="图片">
               <AppIcon name="image" />
             </button>
+            <button @click="openSnippetDialog" class="md-tool-btn snippet-tool-btn" title="打开片段库">
+              <AppIcon name="article" />
+              <span>插入片段</span>
+            </button>
           </div>
           <!-- 隐藏的图片上传 input -->
           <input 
@@ -185,6 +193,55 @@
           @load="handleWechatEditorLoad"
         ></iframe>
       </div>
+
+      <Teleport to="body">
+        <div v-if="showSnippetDialog" class="modal-overlay" @click.self="closeSnippetDialog">
+          <div class="publish-dialog snippet-dialog" :class="{ dark: isDark }" @click.stop>
+            <div class="dialog-header">
+              <h3>常用 Markdown 片段</h3>
+              <button @click="closeSnippetDialog" class="close-btn" title="关闭"><AppIcon name="xmark" /></button>
+            </div>
+            <div class="dialog-body snippet-body">
+              <section class="snippet-section">
+                <div class="snippet-section-title">预置片段</div>
+                <div class="preset-snippet-grid">
+                  <div v-for="snippet in presetSnippets" :key="snippet.id" class="snippet-item preset-snippet-item">
+                    <div class="snippet-item-main">
+                      <strong>{{ snippet.name }}</strong>
+                      <span>{{ snippet.description }}</span>
+                    </div>
+                    <div class="snippet-item-actions">
+                      <button class="snippet-action" @click="insertSnippet(snippet)" title="插入预置片段">插入</button>
+                      <button class="snippet-action" @click="usePresetAsNew(snippet)" title="基于此预置创建我的片段">基于此新建</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <div class="snippet-create">
+                <div class="snippet-section-title">{{ editingSnippetId ? '编辑我的片段' : '新建我的片段' }}</div>
+                <input v-model.trim="snippetName" class="snippet-name-input" placeholder="片段名称，例如：文章免责声明" @keyup.enter="saveSnippet" />
+                <textarea v-model="snippetContent" class="snippet-content-input" rows="4" placeholder="输入 Markdown 片段内容"></textarea>
+                <button class="publish-btn" :disabled="!snippetName || !snippetContent.trim()" @click="saveSnippet">{{ editingSnippetId ? '保存修改' : '保存片段' }}</button>
+              </div>
+              <div class="snippet-section-title">我的片段</div>
+              <div v-if="snippets.length" class="snippet-list">
+                <div v-for="snippet in snippets" :key="snippet.id" class="snippet-item">
+                  <div class="snippet-item-main">
+                    <strong>{{ snippet.name }}</strong>
+                    <span>{{ snippet.content.slice(0, 90) }}{{ snippet.content.length > 90 ? '...' : '' }}</span>
+                  </div>
+                  <div class="snippet-item-actions">
+                    <button class="snippet-action" @click="insertSnippet(snippet)" title="插入片段">插入</button>
+                    <button class="snippet-action" @click="editSnippet(snippet)" title="编辑片段">编辑</button>
+                    <button class="snippet-action danger" @click="deleteSnippet(snippet)" title="删除片段">删除</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="snippet-empty">还没有保存的片段。先填写名称和 Markdown 内容，再点击“保存片段”。</div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 底部拖拽条 - 调整高度 -->
       <div v-if="editorTab === 'general'" class="height-resizer" :class="{ dragging: isResizingHeight }" @mousedown="startResizeHeight">
@@ -261,9 +318,40 @@
             </div>
           </div>
           <div class="dialog-footer">
-            <button @click="confirmPublish" class="publish-btn" :disabled="selectedAccounts.length === 0 || publishing">
-              {{ publishing ? '发布中...' : `发布到 ${selectedAccounts.length} 个平台` }}
-            </button>
+            <div v-if="preflight" class="preflight-summary" :class="{ blocked: !preflight.canCreateJob }">
+              <div>发布前检查：{{ preflight.results.filter(r => r.status === 'pass').length }} 个通过，{{ preflight.results.filter(r => r.status === 'warning').length }} 个警告，{{ preflight.results.filter(r => r.status === 'blocked').length }} 个阻止</div>
+              <details v-for="result in preflight.results" :key="`${result.platform}-${result.accountId}`" class="preflight-result" :open="result.status !== 'pass'">
+                <summary>
+                  <strong>{{ getPlatformName(result.platform) }}</strong>：{{ result.status === 'pass' ? '通过' : result.status === 'warning' ? `警告 ${result.warnings.length} 项` : `阻止 ${result.errors.length} 项` }}
+                  <span>（{{ result.artifact.format.toUpperCase() }}，{{ result.artifact.images.length }} 张图片）</span>
+                </summary>
+                <div v-if="result.errors.length || result.warnings.length" class="preflight-issues">
+                  <div v-for="item in [...result.errors, ...result.warnings]" :key="item.id" class="preflight-issue" :class="item.severity">
+                    <span class="preflight-issue-label">{{ item.severity === 'error' ? '必须处理' : '需要注意' }}</span>
+                    <div>
+                      <div class="preflight-issue-message">{{ item.message }}</div>
+                      <div v-if="item.suggestion" class="preflight-issue-suggestion">处理建议：{{ item.suggestion }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="result.manualSteps.length" class="preflight-manual">
+                  <div class="preflight-manual-title">发布时还需要你确认</div>
+                  <ol><li v-for="step in result.manualSteps" :key="step">{{ step }}</li></ol>
+                </div>
+              </details>
+            </div>
+            <label v-if="preflight?.requiresWarningConfirmation && preflight.canCreateJob" class="preflight-confirm">
+              <input v-model="preflightWarningsConfirmed" type="checkbox" />
+              <span>我已查看警告，并接受平台可能产生的内容差异</span>
+            </label>
+            <div class="publish-actions">
+              <button @click="runPreflight" class="preflight-btn" :disabled="selectedAccounts.length === 0 || publishing">
+                {{ publishing ? '检查中...' : '检查发布内容' }}
+              </button>
+              <button @click="confirmPublish" class="publish-btn" :disabled="selectedAccounts.length === 0 || publishing || !preflight?.canCreateJob || (preflight.requiresWarningConfirmation && !preflightWarningsConfirmed)">
+                {{ publishing ? '创建中...' : '确认并创建发布任务' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -292,6 +380,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useMessage } from 'naive-ui';
 import { db, type Account, ChromeStorageBridge, AccountStatus } from '@wendispatch/core';
+import { preflightTargets } from '@wendispatch/adapters';
+import type { PreflightResult } from '@wendispatch/core';
 import { renderMarkdownPreview, processMermaidInContainer } from '../utils/markdown-preview';
 import { 
   hasImageInClipboard, 
@@ -320,6 +410,49 @@ const sourceUrl = ref('');
 const images = ref<any[]>([]);
 const cover = ref<any>(null);
 const previewImg = ref<any>(null);
+const snippets = ref<any[]>([]);
+const showSnippetDialog = ref(false);
+const snippetName = ref('');
+const snippetContent = ref('');
+const editingSnippetId = ref<string | null>(null);
+const presetSnippets = [
+  {
+    id: 'preset-key-points',
+    name: '本文要点',
+    description: '用列表快速说明文章内容',
+    content: '## 本文要点\n\n- 要点一\n- 要点二\n- 要点三\n',
+  },
+  {
+    id: 'preset-prerequisites',
+    name: '准备工作',
+    description: '列出环境、工具和前置条件',
+    content: '## 准备工作\n\n开始前，请确认：\n\n- 前置条件一\n- 前置条件二\n- 所需工具或环境\n',
+  },
+  {
+    id: 'preset-steps',
+    name: '操作步骤',
+    description: '创建清晰的分步操作结构',
+    content: '## 操作步骤\n\n### 第一步\n\n说明具体操作。\n\n### 第二步\n\n说明具体操作。\n\n### 第三步\n\n说明具体操作。\n',
+  },
+  {
+    id: 'preset-notes',
+    name: '注意事项',
+    description: '突出限制条件和重要提醒',
+    content: '## 注意事项\n\n> 请在操作前确认以下事项。\n\n- 注意事项一\n- 注意事项二\n',
+  },
+  {
+    id: 'preset-faq',
+    name: '常见问题',
+    description: '添加问答形式的补充说明',
+    content: '## 常见问题\n\n### 问题一\n\n回答内容。\n\n### 问题二\n\n回答内容。\n',
+  },
+  {
+    id: 'preset-summary-references',
+    name: '总结与参考资料',
+    description: '补充文章总结和相关链接',
+    content: '## 总结\n\n总结文章的关键结论。\n\n## 参考资料\n\n- [参考资料名称](https://example.com)\n',
+  },
+];
 type EditorTab = 'general' | 'wechat';
 const editorTab = ref<EditorTab>('general');
 const wechatEditorUrl = computed(() => chrome.runtime.getURL(
@@ -334,6 +467,8 @@ const selectedAccounts = ref<string[]>([]);
 const hasZhihuSelection = computed(() => selectedAccounts.value.some((id) =>
   enabledAccounts.value.find((account) => account.id === id)?.platform === 'zhihu',
 ));
+const preflight = ref<PreflightResult | null>(null);
+const preflightWarningsConfirmed = ref(false);
 
 const editorRef = ref<HTMLTextAreaElement | null>(null);
 const previewRef = ref<HTMLDivElement | null>(null);
@@ -675,6 +810,88 @@ function insertMarkdownSyntax(type: 'ol' | 'ul' | 'link' | 'code' | 'quote' | 'i
     const newPosition = start + cursorOffset;
     editor.selectionStart = newPosition;
     editor.selectionEnd = newPosition;
+    editor.focus();
+  });
+}
+
+async function loadSnippets() {
+  const stored = await db.templates.toArray();
+  snippets.value = stored.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function openSnippetDialog() {
+  editingSnippetId.value = null;
+  snippetName.value = '';
+  snippetContent.value = '';
+  showSnippetDialog.value = true;
+  void loadSnippets();
+}
+
+function closeSnippetDialog() {
+  showSnippetDialog.value = false;
+  editingSnippetId.value = null;
+  snippetName.value = '';
+  snippetContent.value = '';
+}
+
+async function saveSnippet() {
+  const name = snippetName.value.trim();
+  const content = snippetContent.value;
+  if (!name || !content.trim()) return;
+  const now = Date.now();
+  if (editingSnippetId.value) {
+    await db.templates.update(editingSnippetId.value, { name, content, updatedAt: now });
+  } else {
+    await db.templates.add({
+      id: crypto.randomUUID?.() || `snippet-${now}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      content,
+      variables: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  await loadSnippets();
+  editingSnippetId.value = null;
+  snippetName.value = '';
+  snippetContent.value = '';
+  showCopySuccess('片段已保存');
+}
+
+function editSnippet(snippet: any) {
+  editingSnippetId.value = snippet.id;
+  snippetName.value = snippet.name;
+  snippetContent.value = snippet.content;
+}
+
+function usePresetAsNew(snippet: any) {
+  editingSnippetId.value = null;
+  snippetName.value = snippet.name;
+  snippetContent.value = snippet.content;
+}
+
+async function deleteSnippet(snippet: any) {
+  if (!window.confirm(`确定删除片段“${snippet.name}”吗？`)) return;
+  await db.templates.delete(snippet.id);
+  await loadSnippets();
+  if (editingSnippetId.value === snippet.id) {
+    editingSnippetId.value = null;
+    snippetName.value = '';
+    snippetContent.value = '';
+  }
+}
+
+function insertSnippet(snippet: any) {
+  const editor = editorRef.value;
+  if (!editor) return;
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  body.value = body.value.slice(0, start) + snippet.content + body.value.slice(end);
+  closeSnippetDialog();
+  nextTick(() => {
+    const position = start + snippet.content.length;
+    editor.selectionStart = position;
+    editor.selectionEnd = position;
     editor.focus();
   });
 }
@@ -1289,16 +1506,43 @@ function getPlatformName(platform: string): string {
   return names[platform] || platform;
 }
 
+function targetKey(target: { platform: string; accountId: string }): string {
+  return `${target.platform}:${target.accountId}`;
+}
+
+function selectedTargets() {
+  return selectedAccounts.value.flatMap(accountId => {
+    const account = enabledAccounts.value.find(item => item.id === accountId);
+    return account ? [{ platform: account.platform, accountId, config: {} }] : [];
+  });
+}
+
+function retainPreflightForSelection() {
+  if (!preflight.value) return;
+  const selectedKeys = new Set(selectedTargets().map(targetKey));
+  const results = preflight.value.results.filter(result => selectedKeys.has(targetKey(result)));
+  if (results.length === 0) {
+    preflight.value = null;
+    preflightWarningsConfirmed.value = false;
+    return;
+  }
+  const complete = results.length === selectedKeys.size;
+  preflight.value = { ...preflight.value, results, canCreateJob: complete && results.every(result => result.status !== 'blocked'), requiresWarningConfirmation: results.some(result => result.status === 'warning') };
+  if (!complete) preflightWarningsConfirmed.value = false;
+}
+
 function toggleAccount(accountId: string) {
   const idx = selectedAccounts.value.indexOf(accountId);
   if (idx > -1) selectedAccounts.value.splice(idx, 1);
   else selectedAccounts.value.push(accountId);
+  retainPreflightForSelection();
 }
 
 function toggleSelectAll() {
   const available = availableAccounts.value;
   if (allSelected.value) { selectedAccounts.value = selectedAccounts.value.filter(id => !available.some(a => a.id === id)); }
   else { const ids = new Set(selectedAccounts.value); available.forEach(a => ids.add(a.id)); selectedAccounts.value = Array.from(ids); }
+  retainPreflightForSelection();
 }
 
 async function publish() {
@@ -1316,29 +1560,65 @@ async function publish() {
   showPublishDialog.value = true;
 }
 
-function closePublishDialog() { showPublishDialog.value = false; selectedAccounts.value = []; }
+function closePublishDialog() { showPublishDialog.value = false; selectedAccounts.value = []; preflight.value = null; preflightWarningsConfirmed.value = false; }
 function goToAccounts() { window.location.hash = 'accounts'; }
 
-async function confirmPublish() {
+async function runPreflight() {
   if (selectedAccounts.value.length === 0) { alert('请选择至少一个发布平台'); return; }
+  publishing.value = true;
+  try {
+    const post = await db.posts.get(id.value);
+    if (!post) throw new Error('文章不存在');
+    const targets = selectedTargets();
+    const samePost = preflight.value?.postId === post.id && preflight.value.postVersion === post.version;
+    const existing = samePost ? (preflight.value?.results || []) : [];
+    const existingKeys = new Set(existing.map(targetKey));
+    const missingTargets = targets.filter(target => !existingKeys.has(targetKey(target)));
+    const fresh = missingTargets.length > 0 ? await preflightTargets(post as any, missingTargets) : null;
+    const byKey = new Map([
+      ...existing.filter(result => targets.some(target => targetKey(target) === targetKey(result))),
+      ...(fresh?.results || []),
+    ].map(result => [targetKey(result), result]));
+    const results = targets.map(target => byKey.get(targetKey(target))).filter(Boolean) as NonNullable<typeof preflight.value>['results'];
+    const preflightResult: PreflightResult = {
+      postId: post.id,
+      postVersion: post.version,
+      results,
+      canCreateJob: results.length === targets.length && results.every(result => result.status !== 'blocked'),
+      requiresWarningConfirmation: results.some(result => result.status === 'warning'),
+      checkedAt: Date.now(),
+    };
+    preflight.value = preflightResult;
+    if (missingTargets.length > 0) preflightWarningsConfirmed.value = false;
+    if (!preflightResult.canCreateJob) {
+      message.error('发布前检查发现必须先处理的问题，请查看检查结果', { duration: 3500 });
+      return;
+    }
+    message.success('检查完成，请查看结果后确认创建任务', { duration: 2200 });
+  } catch (e: any) { message.error('检查失败: ' + (e?.message || '未知错误'), { duration: 3000 }); }
+  finally { publishing.value = false; }
+}
+
+async function confirmPublish() {
+  if (!preflight.value?.canCreateJob) return;
+  if (preflight.value.requiresWarningConfirmation && !preflightWarningsConfirmed.value) return;
   publishing.value = true;
   try {
     const post = await db.posts.get(id.value);
     if (!post) throw new Error('文章不存在');
     const targets = selectedAccounts.value.map(accountId => {
       const account = enabledAccounts.value.find(a => a.id === accountId);
-      return {
-        platform: account!.platform,
-        accountId,
-        config: {},
-      };
+      return { platform: account!.platform, accountId, config: {} };
     });
+    // `preflight` is a Vue ref. Persist only a plain structured-cloneable snapshot;
+    // IndexedDB cannot clone the reactive Proxy held by the ref.
+    const preflightResult = JSON.parse(JSON.stringify(preflight.value)) as PreflightResult;
     const platformName = (p: string) => ({ juejin: '掘金', csdn: 'CSDN', zhihu: '知乎', wechat: '微信公众号', cnblogs: '博客园' } as Record<string, string>)[p] || p;
     const platformListText = Array.from(new Set(targets.map(t => t.platform))).map(platformName).join('、');
     
     const jobId = crypto.randomUUID();
     const now = Date.now();
-    await db.jobs.add({ id: jobId, postId: id.value, targets, state: 'PENDING', progress: 0, attempts: 0, maxAttempts: 3, logs: [{ id: crypto.randomUUID(), level: 'info', step: 'create', message: `创建发布任务，目标平台：${platformListText}`, timestamp: now }], createdAt: now, updatedAt: now });
+    await db.jobs.add({ id: jobId, postId: id.value, targets, state: 'PENDING', progress: 0, attempts: 0, maxAttempts: 3, preflight: { checkedAt: preflightResult.checkedAt, postVersion: preflightResult.postVersion, results: preflightResult.results, fingerprint: preflightResult.results.map(result => result.artifact.fingerprint).join(':'), warningsConfirmed: preflightResult.requiresWarningConfirmation }, logs: [{ id: crypto.randomUUID(), level: 'info', step: 'preflight', message: `发布前检查完成，目标平台：${platformListText}`, meta: { statuses: preflightResult.results.map(result => ({ platform: result.platform, status: result.status })) }, timestamp: now }], createdAt: now, updatedAt: now });
     chrome.runtime.sendMessage({ type: 'START_PUBLISH_JOB', data: { jobId } });
     closePublishDialog();
     message.success(`发布任务已创建：${platformListText}`, { duration: 1000 });
@@ -1377,6 +1657,7 @@ function setupStorageListener() {
 
 onMounted(() => { 
   loadSavedDimensions(); 
+  void loadSnippets();
   void load().then(() => nextTick(() => fitEditorToViewport()));
   window.addEventListener('resize', fitEditorToViewport);
   document.addEventListener('visibilitychange', handleVisibilityChange); 
@@ -1415,6 +1696,33 @@ onUnmounted(() => {
 .md-toolbar.dark { background: #111827; }
 .md-tool-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; border: none; border-radius: 4px; background: #eef1f2; cursor: pointer; font-size: 12px; color: #4b5563; transition: background-color 0.15s ease, color 0.15s ease; }
 .md-tool-btn:hover { background: #e2e7e8; color: #1f2937; }
+.snippet-tool-btn { width: auto; padding: 0 8px; gap: 4px; }
+.snippet-dialog { width: min(720px, calc(100vw - 32px)); }
+.snippet-body { display: flex; flex-direction: column; gap: 12px; max-height: min(720px, calc(100vh - 120px)); overflow-y: auto; }
+.snippet-section { display: flex; flex-direction: column; gap: 8px; }
+.snippet-section-title { color: #374151; font-size: 13px; font-weight: 700; }
+.publish-dialog.dark .snippet-section-title { color: #e5e7eb; }
+.preset-snippet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.preset-snippet-item { align-items: flex-start; flex-direction: column; }
+.preset-snippet-item .snippet-item-actions { width: 100%; justify-content: flex-end; }
+.snippet-create { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+.publish-dialog.dark .snippet-create { border-bottom-color: #374151; }
+.snippet-name-input, .snippet-content-input { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 5px; padding: 8px 10px; font: inherit; color: #1f2937; background: #fff; }
+.snippet-content-input { resize: vertical; min-height: 88px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.publish-dialog.dark .snippet-name-input, .publish-dialog.dark .snippet-content-input { border-color: #4b5563; color: #e5e7eb; background: #1f2937; }
+.snippet-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.snippet-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px; }
+.publish-dialog.dark .snippet-item { border-color: #374151; }
+.snippet-item-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.snippet-item-main strong { font-size: 14px; }
+.snippet-item-main span { color: #6b7280; font-size: 12px; white-space: pre-wrap; overflow: hidden; text-overflow: ellipsis; }
+.publish-dialog.dark .snippet-item-main span { color: #9ca3af; }
+.snippet-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.snippet-action { border: 0; border-radius: 4px; padding: 5px 8px; background: #eef1f2; color: #374151; cursor: pointer; font-size: 12px; }
+.snippet-action:hover { background: #dfe5e7; }
+.snippet-action.danger { color: #b91c1c; }
+.snippet-empty { color: #6b7280; text-align: center; padding: 18px; }
+@media (max-width: 640px) { .preset-snippet-grid { grid-template-columns: 1fr; } }
 .md-tool-btn:active { background: #d8dfe0; transform: scale(0.95); }
 .md-toolbar.dark .md-tool-btn { background: #2b3337; color: #c7d0d3; }
 .md-toolbar.dark .md-tool-btn:hover { background: #374146; color: #f3f4f6; }
@@ -1451,10 +1759,14 @@ onUnmounted(() => {
 .editor-header-actions { gap: 6px; }
 .header-action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; color: #374151; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: background-color .2s, border-color .2s, color .2s; }
 .header-action-btn:hover { background: #f4f8f5; border-color: #b8c9c0; color: #315548; }
+.snippet-header-btn { border-color: #9fc4b1; background: #eef8f2; color: #246044; }
+.snippet-header-btn:hover { border-color: #6fa689; background: #dff1e7; color: #174b34; }
 .header-action-btn.primary { border-color: #2e9b68; background: #2e9b68; color: #fff; }
 .header-action-btn.primary:hover { border-color: #277f56; background: #277f56; }
 .toolbar-actions.dark .header-action-btn { border-color: #4b5563; background: #29343a; color: #e5e7eb; }
 .toolbar-actions.dark .header-action-btn:hover { background: #34423e; border-color: #789b8c; }
+.toolbar-actions.dark .snippet-header-btn { border-color: #5d806d; background: #294238; color: #d7f2e1; }
+.toolbar-actions.dark .snippet-header-btn:hover { background: #345546; border-color: #83b499; }
 .toolbar-actions.dark .header-action-btn.primary { border-color: #2e9b68; background: #2e9b68; color: #fff; }
 .copy-title-btn { display: flex; align-items: center; justify-content: center; padding: 6px 10px; background: #f4f6f7; border: none; border-radius: 6px; cursor: pointer; color: #6b7280; transition: background-color 0.2s, color 0.2s; flex-shrink: 0; }
 .copy-title-btn:hover { background: #e8edef; color: #374151; }
@@ -1617,6 +1929,35 @@ onUnmounted(() => {
 .publish-dialog.dark .zhihu-notice { border-color: #92400e; background: #422006; color: #fde68a; }
 .dialog-footer { padding: 12px 14px; border-top: 1px solid #e5e7eb; }
 .publish-dialog.dark .dialog-footer { border-top-color: #374151; }
+.preflight-summary { margin-bottom: 10px; padding: 9px 10px; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #78350f; font-size: 11px; line-height: 1.45; max-height: 210px; overflow-y: auto; }
+.preflight-summary.blocked { border-color: #fecaca; background: #fef2f2; color: #7f1d1d; }
+.publish-dialog.dark .preflight-summary { border-color: #92400e; background: #422006; color: #fde68a; }
+.publish-dialog.dark .preflight-summary.blocked { border-color: #991b1b; background: #450a0a; color: #fecaca; }
+.preflight-result { margin-top: 6px; border-top: 1px solid rgba(120, 53, 15, .16); }
+.preflight-result summary { padding: 5px 0; cursor: pointer; list-style-position: inside; }
+.preflight-result summary span { color: #92400e; font-size: 10px; }
+.preflight-issues { display: flex; flex-direction: column; gap: 5px; padding: 2px 0 5px 14px; }
+.preflight-issue { display: flex; gap: 6px; align-items: flex-start; }
+.preflight-issue-label { flex: 0 0 auto; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+.preflight-issue.warning .preflight-issue-label { background: #fef3c7; color: #92400e; }
+.preflight-issue.error .preflight-issue-label { background: #fee2e2; color: #991b1b; }
+.preflight-issue-message { color: inherit; font-weight: 500; }
+.preflight-issue-suggestion { color: #92400e; font-size: 10px; }
+.preflight-manual { padding: 3px 0 3px 14px; color: #6b7280; font-size: 10px; }
+.preflight-manual-title { font-weight: 600; color: inherit; }
+.preflight-manual ol { margin: 3px 0 0 16px; padding: 0; }
+.publish-dialog.dark .preflight-result { border-top-color: rgba(253, 230, 138, .2); }
+.publish-dialog.dark .preflight-result summary span, .publish-dialog.dark .preflight-issue-suggestion { color: #fcd34d; }
+.publish-dialog.dark .preflight-manual { color: #d1d5db; }
+.preflight-confirm { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 9px; color: #78350f; font-size: 11px; line-height: 1.4; cursor: pointer; }
+.preflight-confirm input { margin: 2px 0 0; accent-color: #526d62; }
+.publish-dialog.dark .preflight-confirm { color: #fde68a; }
+.publish-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.preflight-btn { width: 100%; padding: 8px; font-size: 12px; font-weight: 600; background: #fff; color: #526d62; border: 1px solid #526d62; border-radius: 6px; cursor: pointer; }
+.preflight-btn:hover:not(:disabled) { background: #eef5f1; }
+.preflight-btn:disabled { color: #9ca3af; border-color: #d1d5db; cursor: not-allowed; }
+.publish-dialog.dark .preflight-btn { background: #1f2937; color: #a7c7b7; border-color: #789b8c; }
+.publish-dialog.dark .preflight-btn:disabled { color: #6b7280; border-color: #4b5563; }
 .publish-btn { width: 100%; padding: 8px; font-size: 12px; font-weight: 600; background: #526d62; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
 .publish-btn:hover:not(:disabled) { background: #465e55; }
 .publish-btn:disabled { background: #d1d5db; cursor: not-allowed; }

@@ -99,19 +99,19 @@ export interface CanonicalPost {
   updated_at?: string;
   createdAt?: number;
   updatedAt?: number;
-  
+
   // 原始 Markdown（向后兼容）
   body_md: string;
-  
+
   // 微信公众号专用 HTML（懒加载，按需生成）
   body_wechat_html?: string;
-  
+
   // 语义化 AST（可选，逐步迁移）
   ast?: ASTNode[];
-  
+
   // 公式提取（便于平台差异处理）
   formulas?: (InlineMathNode | BlockMathNode)[];
-  
+
   assets?: AssetRef[];
   meta?: Record<string, any>;
 }
@@ -166,6 +166,13 @@ export interface Job {
   updatedAt: number;
   scheduleAt?: number;
   error?: string;
+  preflight?: {
+    checkedAt: number;
+    postVersion?: number;
+    results: import('./preflight').PlatformPreflightResult[];
+    fingerprint: string;
+    warningsConfirmed?: boolean;
+  };
 }
 
 /**
@@ -206,13 +213,13 @@ export interface Account {
   createdAt: number;
   updatedAt: number;
   meta?: Record<string, any>;
-  
+
   // 状态相关字段
   status?: AccountStatus;           // 账号状态
   lastCheckAt?: number;             // 最后检测时间
   lastError?: string;               // 最后错误信息
   consecutiveFailures?: number;     // 连续失败次数
-  
+
   // Cookie 过期时间管理（新增）
   cookieExpiresAt?: number;         // Cookie 最早过期时间（毫秒时间戳）
   needsLazyCheck?: boolean;         // 是否需要懒加载检测（用户选择时才检测）

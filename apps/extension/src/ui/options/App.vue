@@ -164,7 +164,7 @@
           <h3 class="text-lg font-bold mb-2">WenDispatch</h3>
           <p class="text-sm text-gray-500 mb-4">一款高效的内容采集与多平台发布助手</p>
           <div class="flex justify-center gap-3">
-            <n-button size="small" @click="openGitHubRepo">GitHub 仓库</n-button>
+            <n-button size="small" @click="openGitHubRepo"><AppIcon name="globe" />GitHub 仓库</n-button>
           </div>
         </div>
       </n-modal>
@@ -174,7 +174,7 @@
         <div class="text-center">
           <p class="text-sm text-gray-500 mb-4">若觉得项目不错，可以通过以下方式支持我们～</p>
           <p class="text-xs text-gray-400 mb-4">赞赏功能即将上线，敬请期待！</p>
-          <n-button @click="showSponsorDialog = false">关闭</n-button>
+          <n-button @click="showSponsorDialog = false"><AppIcon name="xmark" />关闭</n-button>
         </div>
       </n-modal>
     </n-message-provider>
