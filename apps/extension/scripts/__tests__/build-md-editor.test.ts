@@ -21,6 +21,11 @@ const PROJECT_ROOT = resolve(__dirname, '../../../../');
 
 // Path to the md-editor build output
 const MD_EDITOR_OUTPUT_DIR = resolve(PROJECT_ROOT, 'apps/extension/public/md-editor');
+const MD_EDITOR_HTML_PATH = resolve(MD_EDITOR_OUTPUT_DIR, 'md-editor.html');
+
+// The assets directory is tracked in git, but md-editor.html is a gitignored
+// build artifact. Its presence is the reliable signal that a build was run.
+const HAS_MD_EDITOR_BUILD = existsSync(MD_EDITOR_HTML_PATH);
 
 // Required files and directories for a complete build
 const REQUIRED_PATHS = [
@@ -43,26 +48,15 @@ describe('MD Editor Build Output Completeness', () => {
    * Validates: Requirements 4.1, 4.2, 5.1
    * 
    * This test verifies that the build output contains all required files.
-   * Note: This test should be run after the build process completes.
+   * The assertions run only when md-editor.html exists: the assets directory is
+   * tracked in git even on a clean checkout, so it alone cannot signal a build.
    */
-  describe('Property 3: Build Output Completeness', () => {
+  describe.skipIf(!HAS_MD_EDITOR_BUILD)('Property 3: Build Output Completeness', () => {
     it('should have md-editor output directory', () => {
-      // Skip if build hasn't been run yet
-      if (!existsSync(MD_EDITOR_OUTPUT_DIR)) {
-        console.log('md-editor build output not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-      
       expect(existsSync(MD_EDITOR_OUTPUT_DIR)).toBe(true);
     });
 
     it('should contain all required paths', () => {
-      // Skip if build hasn't been run yet
-      if (!existsSync(MD_EDITOR_OUTPUT_DIR)) {
-        console.log('md-editor build output not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-
       for (const requiredPath of REQUIRED_PATHS) {
         const fullPath = resolve(MD_EDITOR_OUTPUT_DIR, requiredPath);
         expect(
@@ -73,14 +67,7 @@ describe('MD Editor Build Output Completeness', () => {
     });
 
     it('should have md-editor.html with required content', () => {
-      // Skip if build hasn't been run yet
-      const htmlPath = resolve(MD_EDITOR_OUTPUT_DIR, 'md-editor.html');
-      if (!existsSync(htmlPath)) {
-        console.log('md-editor.html not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-
-      const htmlContent = readFileSync(htmlPath, 'utf-8');
+      const htmlContent = readFileSync(MD_EDITOR_HTML_PATH, 'utf-8');
       
       for (const pattern of REQUIRED_HTML_PATTERNS) {
         expect(
@@ -93,11 +80,6 @@ describe('MD Editor Build Output Completeness', () => {
     it('should not package remotely hosted executable scripts in either HTML entrypoint', () => {
       for (const filename of ['md-editor.html', 'index.html']) {
         const htmlPath = resolve(MD_EDITOR_OUTPUT_DIR, filename);
-        if (!existsSync(htmlPath)) {
-          console.log(`${filename} not found. Run \`pnpm build:md-editor\` first.`);
-          return;
-        }
-
         const htmlContent = readFileSync(htmlPath, 'utf-8');
         expect(htmlContent).not.toMatch(/<script[^>]+src=["'](?:https?:)?\/\//i);
         expect(htmlContent).not.toMatch(/<script\b(?![^>]*\bsrc=)[^>]*>/i);
@@ -105,13 +87,7 @@ describe('MD Editor Build Output Completeness', () => {
     });
 
     it('should have JavaScript files in static/js directory', () => {
-      // Skip if build hasn't been run yet
       const jsDir = resolve(MD_EDITOR_OUTPUT_DIR, 'static/js');
-      if (!existsSync(jsDir)) {
-        console.log('static/js directory not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-
       const jsFiles = readdirSync(jsDir).filter(f => f.endsWith('.js'));
       expect(jsFiles.length).toBeGreaterThan(0);
     });
@@ -122,14 +98,7 @@ describe('MD Editor Build Output Completeness', () => {
      * Note: External URLs (http://, https://) are skipped as they are CDN resources.
      */
     it('all local script references in md-editor.html should resolve to existing files', () => {
-      // Skip if build hasn't been run yet
-      const htmlPath = resolve(MD_EDITOR_OUTPUT_DIR, 'md-editor.html');
-      if (!existsSync(htmlPath)) {
-        console.log('md-editor.html not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-
-      const htmlContent = readFileSync(htmlPath, 'utf-8');
+      const htmlContent = readFileSync(MD_EDITOR_HTML_PATH, 'utf-8');
       
       // Extract script src attributes
       const scriptSrcRegex = /src=["']([^"']+\.js)["']/g;
@@ -168,14 +137,7 @@ describe('MD Editor Build Output Completeness', () => {
      * Note: External URLs (http://, https://) are skipped as they are CDN resources.
      */
     it('all local stylesheet references in md-editor.html should resolve to existing files', () => {
-      // Skip if build hasn't been run yet
-      const htmlPath = resolve(MD_EDITOR_OUTPUT_DIR, 'md-editor.html');
-      if (!existsSync(htmlPath)) {
-        console.log('md-editor.html not found. Run `pnpm build:md-editor` first.');
-        return;
-      }
-
-      const htmlContent = readFileSync(htmlPath, 'utf-8');
+      const htmlContent = readFileSync(MD_EDITOR_HTML_PATH, 'utf-8');
       
       // Extract link href attributes for stylesheets
       const linkHrefRegex = /href=["']([^"']+\.css)["']/g;
