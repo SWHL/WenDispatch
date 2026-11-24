@@ -28,6 +28,24 @@
         <AppIcon name="refresh" />刷新
       </button>
     </div>
+    <div
+      v-if="hasRunningJob"
+      class="flex items-start gap-3 rounded-lg border px-4 py-3"
+      :class="
+        isDark
+          ? 'border-[#789186] bg-[#263a33] text-[#d7e8de]'
+          : 'border-[#abc4b5] bg-[#eef6f1] text-[#3a5a49]'
+      "
+      role="status"
+    >
+      <AppIcon name="warning" class="mt-0.5 shrink-0" />
+      <div class="text-sm leading-relaxed">
+        <div class="font-semibold">正在发布，请耐心等待</div>
+        <div class="mt-0.5 text-xs opacity-90">
+          插件正在自动打开并切换相关平台的标签页完成发布。发布期间请勿关闭窗口、切换账号或手动操作这些标签页，否则可能中断发布；进度会自动更新，完成后请回到这里查看结果。
+        </div>
+      </div>
+    </div>
     <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
       <div
         v-for="item in summaryItems"
@@ -367,6 +385,9 @@ const allFilteredSelected = computed(
   () =>
     filteredJobs.value.length > 0 &&
     filteredJobs.value.every((job) => selectedJobIds.value.includes(job.id)),
+);
+const hasRunningJob = computed(() =>
+  allJobs.value.some((job) => job.state === "RUNNING"),
 );
 const summaryItems = computed(() => [
   { key: "all", label: "全部任务", value: allJobs.value.length },

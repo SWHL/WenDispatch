@@ -97,6 +97,9 @@
         <!-- 任务状态 -->
         <div v-if="runningJobs.length > 0">
           <h2 class="text-xs font-semibold uppercase tracking-wider mb-3 select-none" :class="isDark ? 'text-gray-400' : 'text-gray-500'">进行中的任务</h2>
+          <div class="mb-3 rounded-md px-3 py-2 text-[11px] leading-relaxed" :class="isDark ? 'bg-[#263a33] text-[#d7e8de]' : 'bg-[#eef6f1] text-[#3a5a49]'" role="status">
+            正在后台发布，请耐心等待。期间请勿关闭浏览器或手动操作插件正在使用的标签页，进度会自动更新。
+          </div>
           <div class="space-y-2">
             <div
               v-for="job in runningJobs"

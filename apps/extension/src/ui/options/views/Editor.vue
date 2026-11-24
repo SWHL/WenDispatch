@@ -1621,7 +1621,7 @@ async function confirmPublish() {
     await db.jobs.add({ id: jobId, postId: id.value, targets, state: 'PENDING', progress: 0, attempts: 0, maxAttempts: 3, preflight: { checkedAt: preflightResult.checkedAt, postVersion: preflightResult.postVersion, results: preflightResult.results, fingerprint: preflightResult.results.map(result => result.artifact.fingerprint).join(':'), warningsConfirmed: preflightResult.requiresWarningConfirmation }, logs: [{ id: crypto.randomUUID(), level: 'info', step: 'preflight', message: `发布前检查完成，目标平台：${platformListText}`, meta: { statuses: preflightResult.results.map(result => ({ platform: result.platform, status: result.status })) }, timestamp: now }], createdAt: now, updatedAt: now });
     chrome.runtime.sendMessage({ type: 'START_PUBLISH_JOB', data: { jobId } });
     closePublishDialog();
-    message.success(`发布任务已创建：${platformListText}`, { duration: 1000 });
+    message.success(`发布任务已创建（${platformListText}）。正在后台发布，请耐心等待，期间不要操作浏览器或切换标签页。`, { duration: 5000 });
     window.location.hash = 'tasks';
   } catch (e: any) { message.error('发布失败: ' + (e?.message || '未知错误'), { duration: 3000 }); }
   finally { publishing.value = false; }

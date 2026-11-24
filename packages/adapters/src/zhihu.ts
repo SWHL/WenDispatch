@@ -124,13 +124,89 @@ export const zhihuAdapter: PlatformAdapter = {
         });
         return doc.body.innerHTML;
       };
-      const htmlToPlainTextLocal = (html: string): string => {
-        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
-        return (doc.body.textContent || '').replace(/\u00a0/g, ' ');
-      };
-      
       const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-      
+
+      // ---- runtime diagnostics -------------------------------------------
+      // fillAndPublish runs in the page's MAIN world, so the result is also
+      // persisted to localStorage. That lets us inspect what actually happened
+      // in the editor even when the extension UI is not reachable.
+      const diag: Record<string, any> = {
+        at: new Date().toISOString(),
+        url: window.location.href,
+      };
+      const persistDiag = () => {
+        try {
+          localStorage.setItem('__WD_ZHIHU_DIAG__', JSON.stringify(diag));
+        } catch (e) {
+          console.warn('[zhihu] 写入诊断信息失败:', e);
+        }
+      };
+      const normalizeTextLocal = (s: string): string => String(s || '').replace(/\s+/g, '');
+      const htmlToTextLocal = (html: string): string => {
+        const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        return doc.body.textContent || '';
+      };
+      const countOccurrences = (haystack: string, needle: string): number => {
+        if (!needle) return 0;
+        let count = 0;
+        let from = 0;
+        for (;;) {
+          const at = haystack.indexOf(needle, from);
+          if (at === -1) return count;
+          count += 1;
+          from = at + needle.length;
+        }
+      };
+
+      // Zhihu's "Markdown 语法输入" option must be OFF when pasting HTML.
+      // When it is ON, the editor renders our HTML and additionally re-parses
+      // the same content as Markdown, appending a flattened duplicate at the
+      // end of the draft. Markdown mode is a账号级/编辑器级开关 that persists
+      // across drafts, so it cannot be assumed off.
+      const disableMarkdownInputMode = async (): Promise<void> => {
+        try {
+          const statusShowsMarkdownMode = () =>
+            /Markdown\s*语法输入中/.test(document.body?.innerText || '');
+
+          if (!statusShowsMarkdownMode()) return;
+
+          const clickByLabel = (label: string): boolean => {
+            const candidates = Array.from(
+              document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+            );
+            const target = candidates.find((el) =>
+              (el.getAttribute('aria-label') || el.textContent || '').trim().includes(label),
+            );
+            if (!target) return false;
+            target.click();
+            return true;
+          };
+
+          // 打开「更多」下拉菜单，点击「Markdown 语法输入」开关
+          if (!clickByLabel('更多')) {
+            console.warn('[zhihu] 未找到「更多」按钮，无法关闭 Markdown 输入模式');
+            return;
+          }
+          await sleep(300);
+          if (!clickByLabel('Markdown 语法输入')) {
+            console.warn('[zhihu] 未找到「Markdown 语法输入」开关');
+            return;
+          }
+          await sleep(300);
+
+          // 关闭菜单，避免遮挡后续操作
+          clickByLabel('更多');
+          await sleep(200);
+
+          console.log(
+            '[zhihu] Markdown 输入模式:',
+            statusShowsMarkdownMode() ? '仍开启（粘贴可能重复）' : '已关闭',
+          );
+        } catch (e) {
+          console.warn('[zhihu] 关闭 Markdown 输入模式失败:', e);
+        }
+      };
+
       // 等待页面完全加载
       if (document.readyState !== 'complete') {
         console.log('[zhihu] Waiting for page to load...');
@@ -333,6 +409,10 @@ export const zhihuAdapter: PlatformAdapter = {
         console.log('[zhihu] Content mode:', useMarkdown ? 'Markdown' : 'HTML');
         console.log('[zhihu] Content length:', contentToFill.length);
 
+        // HTML 模式必须在 Markdown 输入关闭的状态下粘贴，否则知乎会把同一
+        // 内容再解析一次并追加到文末，形成扁平化的重复副本。
+        await disableMarkdownInputMode();
+
         const editorSelectors = [
           '.public-DraftEditor-content[contenteditable="true"]',
           '.DraftEditor-editorContainer [contenteditable="true"]',
@@ -349,16 +429,22 @@ export const zhihuAdapter: PlatformAdapter = {
         // Select any existing Draft.js content so the paste replaces it. Do
         // not call execCommand('delete') here: Draft.js keeps its own state
         // and a DOM-only deletion makes the following paste get ignored.
+        diag.editorTextBeforePaste = (editor as HTMLElement).innerText?.length || 0;
         try {
           const selection = window.getSelection();
           const range = document.createRange();
           range.selectNodeContents(editor);
           selection?.removeAllRanges();
           selection?.addRange(range);
+          // Draft.js keeps its own SelectionState. Without this notification it
+          // may still think the caret is at the end, and the paste gets appended
+          // to the restored draft instead of replacing it.
+          document.dispatchEvent(new Event('selectionchange'));
         } catch (e) {
           console.warn('[zhihu] 选择旧编辑器内容失败:', e);
         }
-        await sleep(100);
+        await sleep(200);
+        persistDiag();
 
         // 使用 DataTransfer + ClipboardEvent 模拟真实粘贴事件
         // Draft.js 编辑器需要通过 clipboardData 获取粘贴内容
@@ -372,8 +458,10 @@ export const zhihuAdapter: PlatformAdapter = {
           if (useMarkdown) {
             dt.setData('text/plain', contentToPaste);
           } else {
+            // Zhihu's Markdown-aware editor consumes BOTH flavors: it renders
+            // text/html and then parses text/plain again, appending a flattened
+            // duplicate at the end. Expose only the HTML flavor here.
             dt.setData('text/html', contentToPaste);
-            dt.setData('text/plain', htmlToPlainTextLocal(contentToPaste));
           }
 
           const pasteEvent = new ClipboardEvent('paste', {
@@ -393,8 +481,8 @@ export const zhihuAdapter: PlatformAdapter = {
             if (useMarkdown) {
               dt.setData('text/plain', contentToPaste);
             } else {
+              // Same rule as the primary path: HTML-only, no text/plain.
               dt.setData('text/html', contentToPaste);
-              dt.setData('text/plain', htmlToPlainTextLocal(contentToPaste));
             }
 
             const pasteEvent = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
@@ -410,8 +498,128 @@ export const zhihuAdapter: PlatformAdapter = {
           }
         }
 
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-        await sleep(800);
+        // Do NOT dispatch a bare `input` event here. Zhihu's Markdown-aware
+        // editor re-reads the editor text on `input`; a synthetic input event
+        // right after the paste can make it append a flattened copy of the
+        // whole article as an extra block.
+        await sleep(900);
+
+        const pastedPlainText = useMarkdown ? contentToPaste : htmlToTextLocal(contentToPaste);
+        const anchor = normalizeTextLocal(pastedPlainText).slice(0, 24);
+        const readEditorText = (root: HTMLElement) =>
+          normalizeTextLocal((root as HTMLElement).innerText || '');
+        const cleanupEditor = await waitForAny(editorSelectors);
+
+        diag.contentMode = useMarkdown ? 'Markdown' : 'HTML';
+        diag.contentLen = contentToPaste.length;
+        diag.anchor = anchor;
+        diag.editorTextAfterPaste = readEditorText(cleanupEditor).length;
+        diag.anchorCountAfterPaste = countOccurrences(readEditorText(cleanupEditor), anchor);
+        diag.editorHtmlAfterPaste = (cleanupEditor.innerHTML || '').slice(0, 1500);
+        persistDiag();
+
+        if (anchor && diag.anchorCountAfterPaste >= 2) {
+          console.warn('[zhihu] 检测到重复内容，尝试移除文末的扁平副本');
+
+          // The real article is split into headings / lists / images, so the
+          // anchor only appears in a container that has block-level children.
+          // The duplicate is one long flat text block with no images.
+          const allMatches = Array.from(
+            cleanupEditor.querySelectorAll<HTMLElement>('*'),
+          ).filter((el) => normalizeTextLocal(el.innerText || '').includes(anchor));
+          const leafMatches = allMatches.filter(
+            (el) => !allMatches.some((other) => other !== el && el.contains(other)),
+          );
+          const flatCandidates = leafMatches
+            .filter((el) => {
+              const text = normalizeTextLocal(el.innerText || '');
+              return (
+                text.length > anchor.length * 3 &&
+                el.querySelectorAll('img, figure, ul, ol, h1, h2, h3, pre, blockquote').length === 0
+              );
+            })
+            .sort((a, b) =>
+              normalizeTextLocal(a.innerText || '').length - normalizeTextLocal(b.innerText || '').length,
+            );
+          diag.flatCandidateCount = flatCandidates.length;
+
+          const sendBackspace = (target: HTMLElement) => {
+            for (const type of ['keydown', 'keyup']) {
+              const event = new KeyboardEvent(type, {
+                key: 'Backspace',
+                code: 'Backspace',
+                bubbles: true,
+                cancelable: true,
+              } as any);
+              Object.defineProperty(event, 'keyCode', { get: () => 8 });
+              Object.defineProperty(event, 'which', { get: () => 8 });
+              target.dispatchEvent(event);
+            }
+          };
+          const deleteRangeViaDraft = async (range: Range) => {
+            cleanupEditor.focus();
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            document.dispatchEvent(new Event('selectionchange'));
+            await sleep(200);
+            // Prefer a Draft.js-native deletion so the editor state stays in
+            // sync with the DOM instead of diverging from it.
+            sendBackspace(cleanupEditor);
+            await sleep(400);
+            if (countOccurrences(readEditorText(cleanupEditor), anchor) >= 2) {
+              // Fallback for editors that ignore synthetic key events.
+              try { document.execCommand('delete', false); } catch { /* ignore */ }
+              await sleep(300);
+            }
+          };
+
+          const duplicate = flatCandidates[flatCandidates.length - 1];
+          try {
+            if (duplicate) {
+              diag.duplicateRemovalStrategy = 'flat-block';
+              const range = document.createRange();
+              range.selectNodeContents(duplicate);
+              await deleteRangeViaDraft(range);
+            } else {
+              // Fallback independent of Zhihu's DOM class names: select from
+              // the second occurrence of the anchor to the end of the editor
+              // (the duplicate is always appended at the bottom).
+              diag.duplicateRemovalStrategy = 'text-range';
+              const walker = document.createTreeWalker(cleanupEditor, NodeFilter.SHOW_TEXT);
+              const chars: Array<{ node: Text; offset: number }> = [];
+              let textNode: Text | null;
+              let joined = '';
+              while ((textNode = walker.nextNode() as Text)) {
+                const value = textNode.textContent || '';
+                for (let i = 0; i < value.length; i += 1) {
+                  if (/\s/.test(value[i])) continue;
+                  joined += value[i];
+                  chars.push({ node: textNode, offset: i });
+                }
+              }
+              const first = joined.indexOf(anchor);
+              const second = first >= 0 ? joined.indexOf(anchor, first + anchor.length) : -1;
+              if (second >= 0 && chars[second]) {
+                const range = document.createRange();
+                range.setStart(chars[second].node, chars[second].offset);
+                range.setEnd(cleanupEditor, cleanupEditor.childNodes.length);
+                await deleteRangeViaDraft(range);
+              } else {
+                diag.duplicateRemovalStrategy = 'no-range';
+              }
+            }
+          } catch (e) {
+            diag.duplicateRemovalError = String(e);
+          }
+
+          diag.anchorCountAfterCleanup = countOccurrences(readEditorText(cleanupEditor), anchor);
+          diag.editorTextAfterCleanup = readEditorText(cleanupEditor).length;
+          diag.editorHtmlAfterCleanup = (cleanupEditor.innerHTML || '').slice(0, 1500);
+          diag.duplicateRemoval = diag.anchorCountAfterCleanup < 2 ? 'removed' : 'failed';
+          console.log('[zhihu] 重复块处理结果:', diag.duplicateRemoval);
+          persistDiag();
+        }
 
         // 3. 处理 Markdown 解析弹窗（仅格式解析确认，不涉及发布）
         // 当知乎识别到 Markdown 格式时，会弹出"确认并解析"提示
@@ -589,20 +797,31 @@ export const zhihuAdapter: PlatformAdapter = {
         // 根据统一发布控制原则：最终发布必须由用户手动完成
         console.log('[zhihu] Step 4: 内容填充完成');
         console.log('[zhihu] ⚠️ 发布操作需要用户手动完成');
-        
-        // 返回当前编辑页 URL，表示内容已填充完成
-        return { 
+
+        diag.finalEditorTextLen = readEditorText(cleanupEditor).length;
+        diag.finalAnchorCount = countOccurrences(readEditorText(cleanupEditor), anchor);
+        diag.finished = true;
+        persistDiag();
+
+        return {
           url: window.location.href,
-          __synccasterNote: '内容已填充完成，请手动点击发布按钮完成发布'
+          __synccasterNote: diag.finalAnchorCount >= 2
+            ? '内容已填充，但检测到末尾仍有重复副本，请检查编辑器'
+            : '内容已填充完成，请手动点击发布按钮完成发布',
+          __wdDiag: diag,
         };
       } catch (error: any) {
         console.error('[zhihu] 填充失败:', error);
+        diag.error = error?.message || String(error);
+        diag.finished = false;
+        persistDiag();
         return {
           url: window.location.href,
           __synccasterError: {
             message: error?.message || String(error),
             stack: error?.stack,
           },
+          __wdDiag: diag,
         } as any;
       }
     },

@@ -37,6 +37,48 @@ describe('zhihu adapter content mode', () => {
     expect(source).not.toContain('stripEmptyHtmlParagraphs(String');
   });
 
+  it('never offers a text/plain flavor in HTML paste mode', () => {
+    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
+    // Markdown mode still needs text/plain, but HTML mode must be HTML-only:
+    // Zhihu parses text/plain as well and appends a flattened duplicate.
+    expect(source).not.toContain('htmlToPlainTextLocal');
+    expect(source).not.toMatch(
+      /setData\('text\/html'[^;]*;\s*dt\.setData\('text\/plain'/,
+    );
+    expect(source).not.toMatch(
+      /setData\("text\/html"[^;]*;\s*dt\.setData\("text\/plain"/,
+    );
+    expect(source).toContain('dt.setData("text/html", contentToPaste)');
+    expect(source).toContain('dt.setData("text/plain", contentToPaste)');
+  });
+
+  it('disables Zhihu Markdown input mode before pasting to avoid duplicate blocks', () => {
+    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
+    expect(source).toContain('disableMarkdownInputMode');
+    expect(source).toContain('Markdown 语法输入');
+    expect(source).toContain('await disableMarkdownInputMode()');
+  });
+
+  it('synchronizes the select-all range with Draft.js before pasting', () => {
+    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
+    expect(source).toMatch(/dispatchEvent\(new Event\(["']selectionchange["']\)\)/);
+    expect(source).toContain('editorTextBeforePaste');
+  });
+
+  it('does not dispatch a bare input event immediately after the paste', () => {
+    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
+    expect(source).not.toMatch(/editor\.dispatchEvent\(new Event\(["']input["']/);
+  });
+
+  it('detects and removes a flattened duplicate, and persists diagnostics', () => {
+    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
+    expect(source).toContain('anchorCountAfterPaste');
+    expect(source).toContain('flatCandidates');
+    expect(source).toContain('duplicateRemoval');
+    expect(source).toContain('__WD_ZHIHU_DIAG__');
+    expect(source).toContain('__wdDiag');
+  });
+
   it('renders links in list items when falling back from missing source HTML', async () => {
     const payload = await zhihuAdapter.transform(
       {
