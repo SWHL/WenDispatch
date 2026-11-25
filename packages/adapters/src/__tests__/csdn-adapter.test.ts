@@ -1,17 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import {
-  csdnAdapter,
-  normalizeCsdnMarkdownEditorText,
-  preserveCsdnMarkdownBlankLines,
-  reconcileCsdnUploadedMarkdown,
-  restoreCsdnImageFallbackMarkdown,
-  replaceCsdnMarkdownImageWithPlaceholder,
-} from '../csdn';
+import { csdnAdapter, preserveCsdnMarkdownBlankLines } from '../csdn';
+import { loadInjectedHelpers } from './injected-helpers';
+
+const HELPERS = [
+  'normalizeCsdnMarkdownEditorTextLocal',
+  'restoreImageFallbackMarkdown',
+  'replaceMarkdownImageWithPlaceholder',
+  'reconcileUploadedMarkdown',
+];
+
+function csdnHelpers() {
+  return Promise.resolve(loadInjectedHelpers(csdnAdapter, HELPERS));
+}
 
 describe('csdn adapter regressions', () => {
-  it('replaces an upload placeholder with the original image when upload fails', () => {
+  it('replaces an upload placeholder with the original image when upload fails', async () => {
+    const { restoreImageFallbackMarkdown } = await csdnHelpers();
     expect(
-      restoreCsdnImageFallbackMarkdown(
+      restoreImageFallbackMarkdown(
         '正文\n\n【WenDispatch图片1】',
         '【WenDispatch图片1】',
         '![](https://example.com/fallback.png)',
@@ -19,11 +25,12 @@ describe('csdn adapter regressions', () => {
     ).toBe('正文\n\n![](https://example.com/fallback.png)');
   });
 
-  it('removes only the current CSDN editor sentinel newlines', () => {
-    expect(normalizeCsdnMarkdownEditorText('\n正文\n\n下一段\n')).toBe(
+  it('removes only the current CSDN editor sentinel newlines', async () => {
+    const { normalizeCsdnMarkdownEditorTextLocal } = await csdnHelpers();
+    expect(normalizeCsdnMarkdownEditorTextLocal('\n正文\n\n下一段\n')).toBe(
       '正文\n\n下一段',
     );
-    expect(normalizeCsdnMarkdownEditorText('\n\n正文\n\n')).toBe('\n正文\n');
+    expect(normalizeCsdnMarkdownEditorTextLocal('\n\n正文\n\n')).toBe('\n正文\n');
   });
 
   it('doubles a single paragraph blank line without changing fenced code', () => {
@@ -92,13 +99,14 @@ describe('csdn adapter regressions', () => {
     expect(source).toContain('Downloaded image URL was not found in Markdown');
   });
 
-  it('replaces the GitHub Raw image from issue #2 before CSDN upload', () => {
+  it('replaces the GitHub Raw image from issue #2 before CSDN upload', async () => {
+    const { replaceMarkdownImageWithPlaceholder } = await csdnHelpers();
     const url =
       'https://raw.githubusercontent.com/SWHL/SWHL.github.io-Assets/main/images/2026/2026-09-03_22-50-10-e4b90ada.png';
     const markdown = `正文\n\n![](${url})\n`;
 
     expect(
-      replaceCsdnMarkdownImageWithPlaceholder(
+      replaceMarkdownImageWithPlaceholder(
         markdown,
         url,
         '【WenDispatch图片1】',
@@ -106,19 +114,21 @@ describe('csdn adapter regressions', () => {
     ).toBe('正文\n\n【WenDispatch图片1】\n');
   });
 
-  it('keeps only the uploaded CSDN image after an asynchronous paste', () => {
+  it('keeps only the uploaded CSDN image after an asynchronous paste', async () => {
+    const { reconcileUploadedMarkdown } = await csdnHelpers();
     const placeholder = '【WenDispatch图片1】';
     const beforeUpload = `正文\n\n${placeholder}\n`;
     const uploaded =
       '![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/uploaded.png)';
     const afterUpload = `${beforeUpload}${uploaded}\n`;
 
-    expect(
-      reconcileCsdnUploadedMarkdown(beforeUpload, afterUpload, placeholder),
-    ).toBe(`正文\n\n${uploaded}\n`);
+    expect(reconcileUploadedMarkdown(beforeUpload, afterUpload, placeholder)).toBe(
+      `正文\n\n${uploaded}\n`,
+    );
   });
 
-  it('preserves the description and project URL lines around the uploaded image', () => {
+  it('preserves the description and project URL lines around the uploaded image', async () => {
+    const { reconcileUploadedMarkdown } = await csdnHelpers();
     const placeholder = '【WenDispatch图片1】';
     const beforeUpload = [
       '### Neko Master',
@@ -133,7 +143,7 @@ describe('csdn adapter regressions', () => {
       '![Neko Master](https://i-blog.csdnimg.cn/direct/neko-master.png)';
 
     expect(
-      reconcileCsdnUploadedMarkdown(
+      reconcileUploadedMarkdown(
         beforeUpload,
         `${beforeUpload}\n${uploaded}`,
         placeholder,
@@ -141,14 +151,15 @@ describe('csdn adapter regressions', () => {
     ).toBe(beforeUpload.replace(placeholder, uploaded));
   });
 
-  it('does not mistake an existing image for the newly uploaded image', () => {
+  it('does not mistake an existing image for the newly uploaded image', async () => {
+    const { reconcileUploadedMarkdown } = await csdnHelpers();
     const existing = '![](https://example.com/existing.png)';
     const placeholder = '【WenDispatch图片1】';
     const beforeUpload = `${existing}\n${placeholder}`;
     const uploaded = '![](https://i-blog.csdnimg.cn/direct/uploaded.png)';
 
     expect(
-      reconcileCsdnUploadedMarkdown(
+      reconcileUploadedMarkdown(
         beforeUpload,
         `${beforeUpload}\n${uploaded}`,
         placeholder,

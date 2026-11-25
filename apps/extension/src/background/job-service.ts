@@ -5,6 +5,13 @@ import { resetSyncGroup } from './tab-group-manager';
 
 const logger = new Logger('job-service');
 
+/** Path declared in manifest.icons[48]; kept here so notifications resolve a real bundled asset. */
+export const NOTIFICATION_ICON_PATH = 'assets/icon-48.png';
+
+export function getNotificationIconUrl(): string {
+  return chrome.runtime.getURL(NOTIFICATION_ICON_PATH);
+}
+
 export function normalizePublishResultError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -53,10 +60,45 @@ export async function createJob(
   return { jobId: job.id };
 }
 
+/**
+ * Persist a terminal failure even when executeJob rejects before its own
+ * try/catch (e.g. the initial job/post read fails, or the RUNNING write fails).
+ * Skip only states that are already terminal or user-controlled; PENDING and
+ * RUNNING are both safe to transition to FAILED on a start failure.
+ */
+export async function markJobFailed(jobId: string, reason: string): Promise<void> {
+  try {
+    const latest = await db.jobs.get(jobId).catch(() => null);
+    const skippableStates: Job['state'][] = ['DONE', 'FAILED', 'PAUSED'];
+    if (latest && skippableStates.includes(latest.state)) {
+      logger.info('state', `Skipping FAILED transition for ${jobId}: state is ${latest.state}`);
+      return;
+    }
+    await db.jobs.update(jobId, {
+      state: 'FAILED',
+      error: reason,
+      updatedAt: Date.now(),
+    });
+  } catch (error) {
+    logger.error('state', `Failed to persist FAILED state for job: ${jobId}`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function startJob(jobId: string): Promise<{ success: true }> {
   logger.info('start', `Starting job: ${jobId}`);
 
-  const job = await db.jobs.get(jobId);
+  let job: Job | undefined;
+  try {
+    job = await db.jobs.get(jobId);
+  } catch (error) {
+    const reason = normalizePublishResultError(error);
+    logger.error('start', `Failed to read job for start: ${jobId}`, { error: reason });
+    await markJobFailed(jobId, reason);
+    throw error;
+  }
+
   if (!job) {
     throw new Error(`Job not found: ${jobId}`);
   }
@@ -65,15 +107,22 @@ export async function startJob(jobId: string): Promise<{ success: true }> {
     throw new Error(`Job is not in PENDING state: ${job.state}`);
   }
 
-  await db.jobs.update(jobId, {
-    state: 'RUNNING',
-    updatedAt: Date.now(),
-  });
-
-  executeJob(jobId).catch((error) => {
-    logger.error('execute', `Job execution failed: ${jobId}`, {
-      error: error instanceof Error ? error.message : String(error),
+  try {
+    await db.jobs.update(jobId, {
+      state: 'RUNNING',
+      updatedAt: Date.now(),
     });
+  } catch (error) {
+    const reason = normalizePublishResultError(error);
+    logger.error('start', `Failed to mark job as RUNNING: ${jobId}`, { error: reason });
+    await markJobFailed(jobId, reason);
+    throw error;
+  }
+
+  executeJob(jobId).catch(async (error) => {
+    const reason = normalizePublishResultError(error);
+    logger.error('execute', `Job execution failed: ${jobId}`, { error: reason });
+    await markJobFailed(jobId, reason);
   });
 
   return { success: true };
@@ -411,7 +460,7 @@ async function executeJob(jobId: string) {
     try {
       await chrome.notifications.create({
         type: 'basic',
-        iconUrl: chrome.runtime.getURL('icon.png'),
+        iconUrl: getNotificationIconUrl(),
         title: 'WenDispatch',
         message: allFailed
           ? `文章《${post.title}》发布失败（全部失败）`

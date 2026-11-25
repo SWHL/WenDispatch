@@ -6,14 +6,6 @@ import {
   stripEmptyHtmlParagraphs,
 } from '@wendispatch/core';
 
-export function shouldPreferZhihuHtmlMode(markdown: string, downloadedImagesCount = 0): boolean {
-  const body = String(markdown || '');
-  if (downloadedImagesCount > 0) return true;
-  if (/```[\s\S]*?```/.test(body)) return true;
-  if (/!\[[^\]]*\]\([^)]+\)/.test(body)) return true;
-  return false;
-}
-
 /**
  * 知乎适配器
  * 
@@ -89,13 +81,6 @@ export const zhihuAdapter: PlatformAdapter = {
           /\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)/g,
           (_match, alt: string, imageUrl: string) => `![${alt}](${imageUrl})`,
         );
-      const shouldPreferZhihuHtmlModeLocal = (markdown: string, downloadedImagesCount = 0): boolean => {
-        const body = String(markdown || '');
-        if (downloadedImagesCount > 0) return true;
-        if (/```[\s\S]*?```/.test(body)) return true;
-        if (/!\[[^\]]*\]\([^)]+\)/.test(body)) return true;
-        return false;
-      };
       const replaceHtmlImagesWithPlaceholdersLocal = (
         rawHtml: string,
         replacements: Array<{ url: string; placeholder: string }>

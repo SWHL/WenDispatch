@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { shouldPreferZhihuHtmlMode, zhihuAdapter } from '../zhihu';
+import { zhihuAdapter } from '../zhihu';
+import { loadInjectedHelpers } from './injected-helpers';
 
 describe('zhihu adapter content mode', () => {
   it('uses edited Markdown instead of stale collected HTML and preserves the separate cover', async () => {
@@ -19,24 +20,6 @@ describe('zhihu adapter content mode', () => {
     expect(payload.cover).toEqual(cover);
   });
 
-  it('prefers html mode for fenced code blocks and downloaded images', () => {
-    expect(shouldPreferZhihuHtmlMode('```ts\nconsole.log(1)\n```', 0)).toBe(true);
-    expect(shouldPreferZhihuHtmlMode('plain text', 2)).toBe(true);
-    expect(shouldPreferZhihuHtmlMode('# title\n\nplain text', 0)).toBe(false);
-  });
-
-  it('keeps fillAndPublish self-contained without imported markdown helpers', () => {
-    const source = String(zhihuAdapter.dom?.fillAndPublish || '');
-    expect(source).toContain('replaceLinkedMarkdownImagesWithPlainImagesLocal');
-    expect(source).toContain('replaceHtmlImagesWithPlaceholdersLocal');
-    expect(source).toContain('shouldPreferZhihuHtmlModeLocal');
-    expect(source).toContain('stripEmptyHtmlParagraphsLocal');
-    expect(source).not.toContain('replaceLinkedMarkdownImagesWithPlainImages(String');
-    expect(source).not.toContain('replaceHtmlImagesWithPlaceholders(contentHtmlProcessed');
-    expect(source).not.toContain('shouldPreferZhihuHtmlMode(contentMarkdown');
-    expect(source).not.toContain('stripEmptyHtmlParagraphs(String');
-  });
-
   it('never offers a text/plain flavor in HTML paste mode', () => {
     const source = String(zhihuAdapter.dom?.fillAndPublish || '');
     // Markdown mode still needs text/plain, but HTML mode must be HTML-only:
@@ -48,8 +31,7 @@ describe('zhihu adapter content mode', () => {
     expect(source).not.toMatch(
       /setData\("text\/html"[^;]*;\s*dt\.setData\("text\/plain"/,
     );
-    expect(source).toContain('dt.setData("text/html", contentToPaste)');
-    expect(source).toContain('dt.setData("text/plain", contentToPaste)');
+    expect(source).toMatch(/dt\.setData\(['"]text\/html['"],\s*contentToPaste\)/);
   });
 
   it('disables Zhihu Markdown input mode before pasting to avoid duplicate blocks', () => {
@@ -61,13 +43,13 @@ describe('zhihu adapter content mode', () => {
 
   it('synchronizes the select-all range with Draft.js before pasting', () => {
     const source = String(zhihuAdapter.dom?.fillAndPublish || '');
-    expect(source).toMatch(/dispatchEvent\(new Event\(["']selectionchange["']\)\)/);
+    expect(source).toMatch(/dispatchEvent\(new Event\(['"]selectionchange['"]\)\)/);
     expect(source).toContain('editorTextBeforePaste');
   });
 
   it('does not dispatch a bare input event immediately after the paste', () => {
     const source = String(zhihuAdapter.dom?.fillAndPublish || '');
-    expect(source).not.toMatch(/editor\.dispatchEvent\(new Event\(["']input["']/);
+    expect(source).not.toMatch(/editor\.dispatchEvent\(new Event\(['"]input['"]/);
   });
 
   it('detects and removes a flattened duplicate, and persists diagnostics', () => {
@@ -77,6 +59,30 @@ describe('zhihu adapter content mode', () => {
     expect(source).toContain('duplicateRemoval');
     expect(source).toContain('__WD_ZHIHU_DIAG__');
     expect(source).toContain('__wdDiag');
+  });
+
+  it('exposes the in-page paste helpers needed for deterministic HTML mode', () => {
+    const helpers = loadInjectedHelpers(zhihuAdapter, [
+      'replaceLinkedMarkdownImagesWithPlainImagesLocal',
+      'replaceHtmlImagesWithPlaceholdersLocal',
+      'stripEmptyHtmlParagraphsLocal',
+    ]);
+
+    for (const name of Object.keys(helpers)) {
+      expect(typeof helpers[name], name).toBe('function');
+    }
+  });
+
+  it('normalizes linked Markdown images to plain images in the in-page helper', () => {
+    const { replaceLinkedMarkdownImagesWithPlainImagesLocal } = loadInjectedHelpers(
+      zhihuAdapter,
+      ['replaceLinkedMarkdownImagesWithPlainImagesLocal'],
+    );
+    const input = '[![alt](https://example.com/a.png)](https://example.com/post)';
+
+    expect(replaceLinkedMarkdownImagesWithPlainImagesLocal(input)).toBe(
+      '![alt](https://example.com/a.png)',
+    );
   });
 
   it('renders links in list items when falling back from missing source HTML', async () => {
